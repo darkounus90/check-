@@ -47,4 +47,6 @@ Decisiones resueltas con el dueño (Andres) el 2026-07-03. Resuelven las ambigü
 - La config base (`tsconfig.base.json`) usa `module: NodeNext` + `moduleResolution: NodeNext` + `verbatimModuleSyntax: true` con `strict` completo (`noUncheckedIndexedAccess`, `noImplicitOverride`, `exactOptionalPropertyTypes`, etc.).
 - **Consecuencia obligatoria:** cada package y app **debe** declarar `"type": "module"` en su `package.json`. Sin eso, TS infiere CommonJS y falla con `TS1287` en cualquier `export` top-level.
 - Cada package/app crea su `tsconfig.json` con `extends: "<ruta>/tsconfig.base.json"`.
+- **Excepción — apps NestJS:** `apps/api` y `apps/workers` corren **CommonJS + decoradores** (`module: CommonJS`, `experimentalDecorators`, `emitDecoratorMetadata`, `verbatimModuleSyntax: false`), porque la DI de NestJS depende de `emitDecoratorMetadata` (incompatible con el ESM estricto). Cada una sobreescribe esos flags en su `tsconfig.json` y su `package.json` **no** lleva `"type": "module"`.
+- **Excepción — Next.js (`apps/web`):** usa `jsx: preserve`, `moduleResolution: Bundler`, alias `@/*`; el build/type-check lo hace `next build`.
 - **Impacto:** todas las tareas que crean packages/apps (E01-T4 a E01-T12) y cualquier paquete futuro.

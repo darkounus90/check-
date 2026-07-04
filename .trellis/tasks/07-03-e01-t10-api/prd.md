@@ -1,19 +1,13 @@
-# E01-T10 Esqueleto apps/api
+# E01-T10 · Esqueleto apps/api
 
 ## Goal
-
-NestJS con GET /health 200
-
-## Requirements
-
-- TBD
+App NestJS con `GET /health` respondiendo 200. Esqueleto sin lógica de negocio.
 
 ## Acceptance Criteria
-
-- [ ] TBD
+- [x] `@check/api` compila (`tsc`).
+- [x] Arranca (`node dist/main.js`) y `GET /health` responde **200** con `{ status: "ok", service: "api", timestamp }` (verificado con curl).
+- [x] NestFactory bootstrappea y mapea la ruta `/health`.
 
 ## Notes
-
-- Keep `prd.md` focused on requirements, constraints, and acceptance criteria.
-- Lightweight tasks can remain PRD-only.
-- For complex tasks, add `design.md` for technical design and `implement.md` for execution planning before `task.py start`.
+- Implementado en `apps/api/`. NestJS corre **CommonJS + decoradores** (`experimentalDecorators`, `emitDecoratorMetadata`), sobreescribiendo el ESM estricto de la base (refinamiento de D8, documentado en decisions.md).
+- Webhooks (Postmark, WhatsApp router) y auth se agregan en Épicas 3/4/8.

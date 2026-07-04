@@ -3,7 +3,7 @@
   "name": "e01-t11-workers",
   "title": "E01-T11 Esqueleto apps/workers",
   "description": "NestJS standalone, proceso worker vacio que arranca",
-  "status": "planning",
+  "status": "in_progress",
   "dev_type": null,
   "scope": null,
   "package": null,

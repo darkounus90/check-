@@ -3,7 +3,7 @@
   "name": "e01-t10-api",
   "title": "E01-T10 Esqueleto apps/api",
   "description": "NestJS con GET /health 200",
-  "status": "planning",
+  "status": "in_progress",
   "dev_type": null,
   "scope": null,
   "package": null,
