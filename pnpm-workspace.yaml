@@ -3,6 +3,12 @@ packages:
   - "packages/*"
 
 # Dependencias nativas con scripts de build aprobados explícitamente (política supply-chain de pnpm).
-# sharp: análisis/optimización de imágenes (usado por Next.js y por el motor de verificación, Épica 6).
+# - sharp: análisis/optimización de imágenes (Next.js + motor de verificación, Épica 6)
+# - prisma / @prisma/*: descarga de query engines (ORM, Épica 2)
+# - esbuild: usado por tsx para ejecutar scripts TS (seed, etc.)
 allowBuilds:
   sharp: true
+  prisma: true
+  "@prisma/client": true
+  "@prisma/engines": true
+  esbuild: true

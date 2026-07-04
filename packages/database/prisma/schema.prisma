@@ -1,0 +1,345 @@
+// Schema Prisma de CHECK — base de datos multi-tenant (Postgres/Supabase).
+//
+// Convenciones (E02-T2, ver .trellis/spec/prd.md):
+// - Dinero SIEMPRE en centavos como entero (`Int amountCents`). Nunca float.
+// - Fechas en UTC (Prisma/Postgres las guardan en UTC). Se muestran en America/Bogota.
+// - Toda tabla "tenant" lleva `businessId` para aislamiento por RLS (Épica 2, E02-T10).
+// - La base global de aprobaciones (ApprovalNumber) es cross-tenant a propósito (E02-T7/T11, D6).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  // directUrl: conexión directa para migraciones (Supabase pooler). Opcional en dev.
+  directUrl = env("DIRECT_URL")
+}
+
+// ─────────────────────────────────────────────────────────────
+// Enums
+// ─────────────────────────────────────────────────────────────
+
+enum Role {
+  OWNER
+  CASHIER
+}
+
+enum VerdictStatus {
+  VERIFIED // 🟢
+  PENDING // 🟡
+  SUSPICIOUS // 🚨
+}
+
+enum MailboxStatus {
+  PENDING
+  VERIFIED
+}
+
+/// Bancos que un negocio puede tener como cuenta receptora (parsers de correo).
+enum ReceiverBank {
+  BANCOLOMBIA
+  DAVIVIENDA
+  BBVA
+}
+
+/// Bancos desde los que un pagador puede emitir (parsers de comprobante OCR).
+enum IssuerBank {
+  NEQUI
+  BANCOLOMBIA
+  DAVIPLATA
+  DAVIVIENDA
+  BBVA
+  BANCO_DE_BOGOTA
+  COLPATRIA
+}
+
+enum BankEmailStatus {
+  PARSED
+  UNPARSED
+}
+
+enum NumberHealth {
+  WARMING
+  CONNECTED
+  DEGRADED
+  BANNED
+}
+
+// ─────────────────────────────────────────────────────────────
+// Identidad y multi-tenant (E02-T3)
+// ─────────────────────────────────────────────────────────────
+
+model Business {
+  id String @id @default(cuid())
+
+  /// ID opaco no adivinable para URLs públicas (/n/{opaqueId}) y buzón (D3).
+  opaqueId String @unique @default(cuid())
+
+  name String
+
+  /// Identificador del buzón entrante (hash de Postmark o local-part). Config del dominio aparte (D1-D2).
+  inboundMailboxId String        @unique
+  mailboxStatus    MailboxStatus @default(PENDING)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  memberships       Membership[]
+  receivingAccounts ReceivingAccount[]
+  vouchers          Voucher[]
+  transactions      Transaction[]
+  bankEmails        BankEmail[]
+  poolAssignments   NumberPoolAssignment[]
+  moneyOpLogs       MoneyOpLog[]
+
+  @@map("businesses")
+}
+
+model User {
+  id String @id @default(cuid())
+
+  /// Vínculo con el usuario de Supabase Auth.
+  supabaseUserId String @unique
+  email          String @unique
+
+  createdAt DateTime @default(now())
+
+  memberships Membership[]
+
+  @@map("users")
+}
+
+model Membership {
+  id String @id @default(cuid())
+
+  userId     String
+  businessId String
+  role       Role
+
+  createdAt DateTime @default(now())
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, businessId])
+  @@index([businessId])
+  @@map("memberships")
+}
+
+// ─────────────────────────────────────────────────────────────
+// Cuentas receptoras (E02-T4)
+// ─────────────────────────────────────────────────────────────
+
+model ReceivingAccount {
+  id String @id @default(cuid())
+
+  businessId    String
+  bank          ReceiverBank
+  accountNumber String
+  alias         String?
+
+  createdAt DateTime @default(now())
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@unique([businessId, bank, accountNumber])
+  @@index([businessId])
+  @@map("receiving_accounts")
+}
+
+// ─────────────────────────────────────────────────────────────
+// Transaccionales: comprobante → transacción → evidencia (E02-T5)
+// ─────────────────────────────────────────────────────────────
+
+model Voucher {
+  id String @id @default(cuid())
+
+  businessId String
+
+  issuerBank         IssuerBank?
+  amountCents        Int?
+  approvalNumber     String?
+  paidAt             DateTime?
+  destinationAccount String?
+  beneficiary        String?
+
+  /// Ruta al artefacto de imagen/PDF (encriptado en reposo, Épica 12).
+  storagePath String?
+  ocrText     String?
+
+  createdAt DateTime @default(now())
+
+  business    Business     @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  transaction Transaction?
+
+  @@index([businessId])
+  @@index([businessId, approvalNumber])
+  @@map("vouchers")
+}
+
+model Transaction {
+  id String @id @default(cuid())
+
+  businessId String
+  voucherId  String @unique
+
+  verdict        VerdictStatus @default(PENDING)
+  amountCents    Int
+  approvalNumber String?
+
+  createdAt  DateTime  @default(now())
+  resolvedAt DateTime?
+
+  business        Business         @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  voucher         Voucher          @relation(fields: [voucherId], references: [id], onDelete: Cascade)
+  evidenceSources EvidenceSource[]
+
+  @@index([businessId])
+  @@index([businessId, verdict])
+  @@map("transactions")
+}
+
+model EvidenceSource {
+  id String @id @default(cuid())
+
+  transactionId String
+
+  /// Defensa/fuente (p. ej. "bank_email", "global_approval", "image_ela").
+  kind   String
+  passed Boolean
+  detail Json?
+
+  createdAt DateTime @default(now())
+
+  transaction Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+
+  @@index([transactionId])
+  @@map("evidence_sources")
+}
+
+// ─────────────────────────────────────────────────────────────
+// Correo bancario entrante (E02-T6)
+// ─────────────────────────────────────────────────────────────
+
+model BankEmail {
+  id String @id @default(cuid())
+
+  businessId String
+
+  bank          ReceiverBank?
+  parserVersion String?
+  status        BankEmailStatus @default(UNPARSED)
+
+  rawContent String
+
+  // Campos parseados (cuando status = PARSED)
+  amountCents        Int?
+  approvalNumber     String?
+  occurredAt         DateTime?
+  destinationAccount String?
+
+  receivedAt DateTime @default(now())
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@index([businessId])
+  @@index([businessId, approvalNumber])
+  @@index([businessId, amountCents, occurredAt])
+  @@map("bank_emails")
+}
+
+// ─────────────────────────────────────────────────────────────
+// Base global de números de aprobación (E02-T7) — cross-tenant (D6)
+// ─────────────────────────────────────────────────────────────
+
+model ApprovalNumber {
+  id String @id @default(cuid())
+
+  /// Banco emisor del número (string libre para no acoplar a un enum al crecer).
+  bank           String
+  approvalNumber String
+
+  /// Primer negocio que lo usó. NO se expone cross-tenant: la Defensa 2 solo consulta existencia (D6).
+  firstBusinessId String
+  firstSeenAt     DateTime @default(now())
+
+  /// Unicidad GLOBAL: el mismo número no puede repetirse en toda la red.
+  @@unique([bank, approvalNumber])
+  @@map("approval_numbers")
+}
+
+// ─────────────────────────────────────────────────────────────
+// WhatsApp: números, sesiones, asignación al pool (E02-T8)
+// ─────────────────────────────────────────────────────────────
+
+model WaNumber {
+  id String @id @default(cuid())
+
+  phoneNumber     String       @unique
+  health          NumberHealth @default(WARMING)
+  warmupStartedAt DateTime?
+
+  createdAt DateTime @default(now())
+
+  session     WaSession?
+  assignments NumberPoolAssignment[]
+
+  @@map("wa_numbers")
+}
+
+model WaSession {
+  id String @id @default(cuid())
+
+  waNumberId String @unique
+
+  /// Estado de autenticación de Baileys (persistido en Postgres, no en disco).
+  authState Json
+
+  updatedAt DateTime @updatedAt
+
+  waNumber WaNumber @relation(fields: [waNumberId], references: [id], onDelete: Cascade)
+
+  @@map("wa_sessions")
+}
+
+model NumberPoolAssignment {
+  id String @id @default(cuid())
+
+  waNumberId String
+  businessId String
+  priority   Int    @default(0)
+
+  createdAt DateTime @default(now())
+
+  waNumber WaNumber @relation(fields: [waNumberId], references: [id], onDelete: Cascade)
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@unique([waNumberId, businessId])
+  @@index([businessId])
+  @@map("number_pool_assignments")
+}
+
+// ─────────────────────────────────────────────────────────────
+// Log inmutable de operaciones con dinero (E02-T9) — append-only
+// ─────────────────────────────────────────────────────────────
+
+model MoneyOpLog {
+  id String @id @default(cuid())
+
+  businessId    String
+  transactionId String
+  verdict       VerdictStatus
+
+  /// Fuentes de evidencia que sustentaron el veredicto (snapshot inmutable).
+  evidenceSources Json
+
+  createdAt DateTime @default(now())
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@index([businessId])
+  @@index([businessId, transactionId])
+  @@map("money_op_logs")
+}

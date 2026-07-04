@@ -11,13 +11,25 @@
       "default": "./dist/index.js"
     }
   },
-  "files": [
-    "dist"
-  ],
+  "files": ["dist", "prisma"],
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "postinstall": "prisma generate",
+    "db:generate": "prisma generate",
+    "db:validate": "prisma validate",
+    "db:migrate": "prisma migrate dev",
+    "db:deploy": "prisma migrate deploy",
+    "db:seed": "tsx prisma/seed.ts",
+    "build": "prisma generate && tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint src",
     "test": "echo \"@check/database: sin tests aun\""
+  },
+  "dependencies": {
+    "@prisma/client": "^6.1.0",
+    "@check/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "prisma": "^6.1.0",
+    "tsx": "^4.19.2"
   }
 }
