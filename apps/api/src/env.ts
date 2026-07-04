@@ -9,6 +9,8 @@ const envSchema = z.object({
   PORT: z.coerce.number().int().positive().default(3001),
   /// URL del proyecto Supabase (para verificar JWT vía JWKS, sin secreto).
   SUPABASE_URL: z.string().url(),
+  /// Conexión Postgres (Prisma). La lee PrismaClient vía env("DATABASE_URL").
+  DATABASE_URL: z.string().min(1),
 });
 
 export type ApiEnv = z.infer<typeof envSchema>;
