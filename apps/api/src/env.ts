@@ -11,6 +11,8 @@ const envSchema = z.object({
   SUPABASE_URL: z.string().url(),
   /// Conexión Postgres (Prisma). La lee PrismaClient vía env("DATABASE_URL").
   DATABASE_URL: z.string().min(1),
+  /// Secret key de Supabase (Admin API: crear usuarios/cajeros). Nunca se loguea.
+  SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
 });
 
 export type ApiEnv = z.infer<typeof envSchema>;
