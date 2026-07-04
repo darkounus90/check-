@@ -3,7 +3,7 @@
   "name": "e01-t8-verifier",
   "title": "E01-T8 Esqueleto packages/verifier",
   "description": "interfaz Defense + tipo Verdict placeholder; compila",
-  "status": "planning",
+  "status": "in_progress",
   "dev_type": null,
   "scope": null,
   "package": null,

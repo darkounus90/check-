@@ -3,7 +3,7 @@
   "name": "e01-t7-ocr",
   "title": "E01-T7 Esqueleto packages/ocr",
   "description": "interfaz OcrProvider placeholder; compila",
-  "status": "planning",
+  "status": "in_progress",
   "dev_type": null,
   "scope": null,
   "package": null,

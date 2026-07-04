@@ -3,7 +3,7 @@
   "name": "e01-t6-parsers",
   "title": "E01-T6 Esqueleto packages/parsers",
   "description": "interfaz BankEmailParser + registro vacio; compila",
-  "status": "planning",
+  "status": "in_progress",
   "dev_type": null,
   "scope": null,
   "package": null,

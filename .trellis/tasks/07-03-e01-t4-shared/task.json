@@ -3,7 +3,7 @@
   "name": "e01-t4-shared",
   "title": "E01-T4 Esqueleto packages/shared",
   "description": "tipos, placeholder Zod, utilidades; compila y es consumible",
-  "status": "planning",
+  "status": "in_progress",
   "dev_type": null,
   "scope": null,
   "package": null,

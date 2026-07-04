@@ -1,19 +1,13 @@
-# E01-T8 Esqueleto packages/verifier
+# E01-T8 · Esqueleto packages/verifier
 
 ## Goal
-
-interfaz Defense + tipo Verdict placeholder; compila
-
-## Requirements
-
-- TBD
+Contrato `Defense` + tipo `Verdict` placeholder; compila.
 
 ## Acceptance Criteria
-
-- [ ] TBD
+- [x] `@check/verifier` compila y emite tipos.
+- [x] Exporta `Verdict` (`verified`/`pending`/`suspicious`), `Defense` (`evaluate`), `DefenseSignal`, `VerificationContext`, y `defenseRegistry` (vacío).
+- [x] Importa `Cents` de `@check/shared` — linkage cross-package verificado.
+- [x] `"type": "module"` declarado (D8).
 
 ## Notes
-
-- Keep `prd.md` focused on requirements, constraints, and acceptance criteria.
-- Lightweight tasks can remain PRD-only.
-- For complex tasks, add `design.md` for technical design and `implement.md` for execution planning before `task.py start`.
+- Implementado en `packages/verifier/`. Las 7 defensas reales, el semáforo y la regla dura "sin correo real, nunca 🟢" llegan en la Épica 6.

@@ -1,19 +1,12 @@
-# E01-T5 Esqueleto packages/database
+# E01-T5 · Esqueleto packages/database
 
 ## Goal
-
-placeholder cliente Prisma tipado; compila
-
-## Requirements
-
-- TBD
+Placeholder del cliente de base de datos (Prisma) tipado; compila. Sin schema real (eso es la Épica 2).
 
 ## Acceptance Criteria
-
-- [ ] TBD
+- [x] `@check/database` compila y emite tipos.
+- [x] Exporta `DatabaseClient` y `createDatabaseClient()` placeholder.
+- [x] `"type": "module"` declarado (D8).
 
 ## Notes
-
-- Keep `prd.md` focused on requirements, constraints, and acceptance criteria.
-- Lightweight tasks can remain PRD-only.
-- For complex tasks, add `design.md` for technical design and `implement.md` for execution planning before `task.py start`.
+- Implementado en `packages/database/`. El schema Prisma, migraciones y RLS llegan en la Épica 2.

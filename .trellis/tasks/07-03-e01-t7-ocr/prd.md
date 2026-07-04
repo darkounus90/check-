@@ -1,19 +1,13 @@
-# E01-T7 Esqueleto packages/ocr
+# E01-T7 · Esqueleto packages/ocr
 
 ## Goal
-
-interfaz OcrProvider placeholder; compila
-
-## Requirements
-
-- TBD
+Contrato `OcrProvider` + `VoucherExtractor` placeholder; compila.
 
 ## Acceptance Criteria
-
-- [ ] TBD
+- [x] `@check/ocr` compila y emite tipos.
+- [x] Exporta `OcrProvider` (`recognize`), `VoucherExtractor`, `ExtractedVoucher`, y `voucherExtractorRegistry` (vacío).
+- [x] Usa tipos de `@check/shared` — linkage verificado.
+- [x] `"type": "module"` declarado (D8).
 
 ## Notes
-
-- Keep `prd.md` focused on requirements, constraints, and acceptance criteria.
-- Lightweight tasks can remain PRD-only.
-- For complex tasks, add `design.md` for technical design and `implement.md` for execution planning before `task.py start`.
+- Implementado en `packages/ocr/`. La integración con Google Cloud Vision y los extractores por banco emisor llegan en la Épica 5.

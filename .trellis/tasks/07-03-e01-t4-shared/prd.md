@@ -1,19 +1,14 @@
-# E01-T4 Esqueleto packages/shared
+# E01-T4 · Esqueleto packages/shared
 
 ## Goal
-
-tipos, placeholder Zod, utilidades; compila y es consumible
-
-## Requirements
-
-- TBD
+Tipos, placeholder de schemas Zod y utilidades compartidas; compila y es consumible por otros packages.
 
 ## Acceptance Criteria
-
-- [ ] TBD
+- [x] `@check/shared` compila (`tsc`) y emite `dist/index.d.ts`.
+- [x] Exporta `Cents` (entero centavos, marca de tipo), `toCents`, `CentsSchema` (Zod), `Result`/`ok`/`err`, `DISPLAY_TIMEZONE = "America/Bogota"`.
+- [x] Consumible desde otro package (verificado: `@check/verifier` importa `Cents`).
+- [x] `"type": "module"` declarado (D8).
 
 ## Notes
-
-- Keep `prd.md` focused on requirements, constraints, and acceptance criteria.
-- Lightweight tasks can remain PRD-only.
-- For complex tasks, add `design.md` for technical design and `implement.md` for execution planning before `task.py start`.
+- Implementado en `packages/shared/`. Verificado con `pnpm build/typecheck/lint` (verde).
+- Refleja convenciones del PRD: dinero en centavos entero, fechas UTC → mostrar en Bogotá.

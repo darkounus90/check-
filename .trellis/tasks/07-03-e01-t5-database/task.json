@@ -3,7 +3,7 @@
   "name": "e01-t5-database",
   "title": "E01-T5 Esqueleto packages/database",
   "description": "placeholder cliente Prisma tipado; compila",
-  "status": "planning",
+  "status": "in_progress",
   "dev_type": null,
   "scope": null,
   "package": null,

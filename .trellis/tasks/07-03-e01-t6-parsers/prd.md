@@ -1,19 +1,13 @@
-# E01-T6 Esqueleto packages/parsers
+# E01-T6 · Esqueleto packages/parsers
 
 ## Goal
-
-interfaz BankEmailParser + registro vacio; compila
-
-## Requirements
-
-- TBD
+Contrato `BankEmailParser` versionado + registro vacío; compila.
 
 ## Acceptance Criteria
-
-- [ ] TBD
+- [x] `@check/parsers` compila y emite tipos.
+- [x] Exporta `BankEmailParser` (con `bank`, `version`, `matches`, `parse`), `ParsedBankEmail`, y `bankEmailParserRegistry` (vacío).
+- [x] Usa tipos de `@check/shared` (`Cents`, `Result`) — linkage verificado.
+- [x] `"type": "module"` declarado (D8).
 
 ## Notes
-
-- Keep `prd.md` focused on requirements, constraints, and acceptance criteria.
-- Lightweight tasks can remain PRD-only.
-- For complex tasks, add `design.md` for technical design and `implement.md` for execution planning before `task.py start`.
+- Implementado en `packages/parsers/`. Los parsers reales por banco receptor y sus fixtures llegan en la Épica 4; se agregan al registro sin refactor del core.

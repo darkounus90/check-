@@ -1,19 +1,12 @@
-# E01-T9 Esqueleto packages/whatsapp
+# E01-T9 · Esqueleto packages/whatsapp
 
 ## Goal
-
-interfaces WhatsAppInstance/Router placeholder; compila
-
-## Requirements
-
-- TBD
+Interfaces `WhatsAppInstance` / `WhatsAppRouter` placeholder; compila.
 
 ## Acceptance Criteria
-
-- [ ] TBD
+- [x] `@check/whatsapp` compila y emite tipos.
+- [x] Exporta `WhatsAppInstance` (`phoneNumber`, `health`, `sendText`), `WhatsAppRouter` (`resolveActiveNumber`), y `NumberHealth`.
+- [x] `"type": "module"` declarado (D8).
 
 ## Notes
-
-- Keep `prd.md` focused on requirements, constraints, and acceptance criteria.
-- Lightweight tasks can remain PRD-only.
-- For complex tasks, add `design.md` for technical design and `implement.md` for execution planning before `task.py start`.
+- Implementado en `packages/whatsapp/`. La capa Baileys real (multi-número, humanización, warmeo, pool, health checks) llega en la Épica 7; el enrutador de QR con failover y fallback PWA en la Épica 8.

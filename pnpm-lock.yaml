@@ -36,6 +36,38 @@ importers:
         specifier: ^8.62.1
         version: 8.62.1(eslint@9.39.4)(typescript@5.9.3)
 
+  packages/database: {}
+
+  packages/ocr:
+    dependencies:
+      '@check/shared':
+        specifier: workspace:*
+        version: link:../shared
+
+  packages/parsers:
+    dependencies:
+      '@check/shared':
+        specifier: workspace:*
+        version: link:../shared
+
+  packages/shared:
+    dependencies:
+      zod:
+        specifier: ^3.24.1
+        version: 3.25.76
+
+  packages/verifier:
+    dependencies:
+      '@check/shared':
+        specifier: workspace:*
+        version: link:../shared
+
+  packages/whatsapp:
+    dependencies:
+      '@check/shared':
+        specifier: workspace:*
+        version: link:../shared
+
 packages:
 
   '@eslint-community/eslint-utils@4.9.1':
@@ -557,6 +589,9 @@ packages:
     resolution: {integrity: sha512-rVksvsnNCdJ/ohGc6xgPwyN8eheCxsiLM8mxuE/t/mOVqJewPuO1miLpTHQiRgTKCLexL4MeAFVagts7HmNZ2Q==}
     engines: {node: '>=10'}
 
+  zod@3.25.76:
+    resolution: {integrity: sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ==}
+
 snapshots:
 
   '@eslint-community/eslint-utils@4.9.1(eslint@9.39.4)':
@@ -1062,3 +1097,5 @@ snapshots:
   word-wrap@1.2.5: {}
 
   yocto-queue@0.1.0: {}
+
+  zod@3.25.76: {}
