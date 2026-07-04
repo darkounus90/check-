@@ -1,0 +1,12 @@
+# Normalizar finales de línea a LF en el repo (evita ruido CRLF en Windows)
+* text=auto eol=lf
+
+# Binarios: no tocar
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.pdf binary
+*.ico binary
+pnpm-lock.yaml -text

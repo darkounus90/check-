@@ -1,0 +1,31 @@
+{
+  "name": "check-monorepo",
+  "version": "0.0.0",
+  "private": true,
+  "description": "CHECK — verificación antifraude de comprobantes de pago",
+  "packageManager": "pnpm@11.6.0",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "dev": "turbo run dev",
+    "lint:root": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^9.39.4",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-simple-import-sort": "^13.0.0",
+    "globals": "^17.7.0",
+    "prettier": "^3.9.4",
+    "turbo": "^2.5.5",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.62.1"
+  }
+}
