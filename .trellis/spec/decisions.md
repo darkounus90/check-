@@ -50,3 +50,20 @@ Decisiones resueltas con el dueño (Andres) el 2026-07-03. Resuelven las ambigü
 - **Excepción — apps NestJS:** `apps/api` y `apps/workers` corren **CommonJS + decoradores** (`module: CommonJS`, `experimentalDecorators`, `emitDecoratorMetadata`, `verbatimModuleSyntax: false`), porque la DI de NestJS depende de `emitDecoratorMetadata` (incompatible con el ESM estricto). Cada una sobreescribe esos flags en su `tsconfig.json` y su `package.json` **no** lleva `"type": "module"`.
 - **Excepción — Next.js (`apps/web`):** usa `jsx: preserve`, `moduleResolution: Bundler`, alias `@/*`; el build/type-check lo hace `next build`.
 - **Impacto:** todas las tareas que crean packages/apps (E01-T4 a E01-T12) y cualquier paquete futuro.
+
+## D9 · Estrategia de migraciones (baseline)
+- La BD se creó con `db push`; se **baselinó** con `prisma migrate` el 2026-07-03: `0_init` (13 tablas) + `1_rls_policies` (RLS + funciones D6), marcadas como aplicadas.
+- En adelante: cambios de esquema con `prisma migrate dev`; deploy con `prisma migrate deploy` (crea tablas + RLS en BD limpia).
+- La migración `1_rls_policies` asume roles de Supabase (`authenticated`, `anon`, `supabase_auth_admin`); no aplica sobre un Postgres plano. `prisma/policies.sql` es la copia editable de referencia — cambiarla exige crear una migración nueva.
+
+## Deuda técnica pendiente (revisar antes de producción)
+Estado al cerrar Épica 4 (2026-07-03):
+1. **[Crítico] Fixtures de parsers son SINTÉTICOS** (`packages/parsers/test/fixtures`). Reemplazar por correos reales de Bancolombia/Davivienda/BBVA; los regex casi seguro no matchean los reales. Requiere que el dueño consiga correos.
+2. **[Crítico] Postmark Inbound no conectado** — dominio placeholder `inbound.check.local`, sin cuenta ni MX. Sin esto no llega correo real.
+3. **[Hecho] Migraciones Prisma** — baselined (D9). ✅
+4. **[Importante] BullMQ/Redis diferido** — parseo inline en el webhook; migrar a cola (Upstash) para no bloquear.
+5. **[Importante] e2e no corren en CI** — el `test` de la api es `echo`; las suites e2e (`apps/api/test/*.ts`) necesitan Supabase y solo corren local. CI cubre solo parsers.
+6. **[Menor] Invitación de cajero por password directo** en vez de email de invitación.
+7. **[Menor] RLS defense-in-depth** — el CRUD de cuentas filtra por `businessId` en código; `TenantService.runAsTenant` existe pero no se usa aún en esos endpoints.
+8. **[Seguridad] Rotar** contraseña de BD y secret key de Supabase (pasaron por el chat); cambiar `POSTMARK_INBOUND_SECRET` (default débil) en prod.
+9. **[Menor] Datos de prueba** del seed (2 negocios) siguen en la BD de dev.
