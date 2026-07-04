@@ -18,7 +18,17 @@
   "commit": null,
   "pr_url": null,
   "subtasks": [],
-  "children": [],
+  "children": [
+    "07-03-e03-t1-auth-jwt",
+    "07-03-e03-t2-claim-rls",
+    "07-03-e03-t3-role-guard",
+    "07-03-e03-t4-register",
+    "07-03-e03-t5-cashier",
+    "07-03-e03-t6-accounts-crud",
+    "07-03-e03-t7-mailbox-guide",
+    "07-03-e03-t8-mailbox-verify",
+    "07-03-e03-t9-green-gate"
+  ],
   "parent": null,
   "relatedFiles": [],
   "notes": "",

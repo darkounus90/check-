@@ -7,6 +7,8 @@ import { z } from "zod";
 const envSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   PORT: z.coerce.number().int().positive().default(3001),
+  /// URL del proyecto Supabase (para verificar JWT vía JWKS, sin secreto).
+  SUPABASE_URL: z.string().url(),
 });
 
 export type ApiEnv = z.infer<typeof envSchema>;
