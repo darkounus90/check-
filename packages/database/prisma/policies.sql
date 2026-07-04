@@ -5,6 +5,12 @@
 -- Patrón Supabase: el JWT lleva el claim `business_id`; las políticas lo leen de
 -- current_setting('request.jwt.claims'). El rol de servicio (service_role) omite RLS.
 --
+-- Permisos base para los roles de Supabase (RLS restringe las FILAS; esto habilita el ACCESO).
+grant usage on schema public to authenticated, anon;
+grant select, insert, update, delete on all tables in schema public to authenticated;
+alter default privileges in schema public
+  grant select, insert, update, delete on tables to authenticated;
+
 -- Helper: business_id del JWT actual (NULL si no hay).
 create or replace function auth_business_id() returns text
   language sql stable
