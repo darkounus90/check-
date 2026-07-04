@@ -11,16 +11,18 @@
       "default": "./dist/index.js"
     }
   },
-  "files": [
-    "dist"
-  ],
+  "files": ["dist"],
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint src",
-    "test": "echo \"@check/ocr: sin tests aun\""
+    "test": "tsx --test test/extractors.test.ts"
   },
   "dependencies": {
-    "@check/shared": "workspace:*"
+    "@check/shared": "workspace:*",
+    "sharp": "^0.34.0"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.2"
   }
 }

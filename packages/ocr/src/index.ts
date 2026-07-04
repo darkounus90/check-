@@ -1,38 +1,21 @@
-import type { Cents, Result } from "@check/shared";
+import { err, type Result } from "@check/shared";
+
+import { voucherExtractorRegistry } from "./detect.js";
+import type { ExtractedVoucher } from "./types.js";
+
+export { detectIssuerBank, voucherExtractorRegistry } from "./detect.js";
+export { normalizeImage } from "./preprocess.js";
+export { GoogleVisionProvider, TextOcrProvider } from "./providers/google-vision.js";
+export { assessOcrQuality } from "./quality.js";
+export type { ExtractedVoucher, OcrProvider, OcrQuality, VoucherExtractor } from "./types.js";
 
 /**
- * OCR y extracción estructurada del comprobante del pagador.
- *
- * Placeholder de la Épica 1 (E01-T7): contrato del proveedor de OCR.
- * La integración real con Google Cloud Vision y los parsers por banco emisor
- * (Nequi, Bancolombia, Daviplata, ...) llegan en la Épica 5.
+ * Extrae los campos estructurados de un comprobante a partir del texto OCR (E05-T12).
+ * Selecciona el primer extractor cuyo banco reconoce el texto.
  */
-
-/** Campos estructurados extraídos de un comprobante de pago. */
-export interface ExtractedVoucher {
-  /** Banco emisor detectado (p. ej. "nequi"). */
-  readonly issuerBank: string;
-  readonly amount: Cents;
-  readonly approvalNumber: string;
-  /** Instante del pago en UTC (ISO 8601). */
-  readonly paidAtUtc: string;
-  readonly destinationAccount: string;
-  readonly beneficiary: string;
+export function extractVoucher(ocrText: string): Result<ExtractedVoucher> {
+  for (const extractor of voucherExtractorRegistry) {
+    if (extractor.matches(ocrText)) return extractor.extract(ocrText);
+  }
+  return err("comprobante no reconocido por ningún extractor");
 }
-
-/** Contrato del proveedor de OCR (texto crudo desde imagen/PDF). */
-export interface OcrProvider {
-  /** Ejecuta OCR sobre los bytes de una imagen o PDF y devuelve el texto plano. */
-  recognize(input: Uint8Array): Promise<Result<string>>;
-}
-
-/** Contrato del extractor estructurado por banco emisor. */
-export interface VoucherExtractor {
-  readonly issuerBank: string;
-  readonly version: string;
-  matches(ocrText: string): boolean;
-  extract(ocrText: string): Result<ExtractedVoucher>;
-}
-
-/** Registro de extractores. Vacío en el MVP inicial; se llena en la Épica 5. */
-export const voucherExtractorRegistry: readonly VoucherExtractor[] = [];

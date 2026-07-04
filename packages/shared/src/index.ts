@@ -37,3 +37,35 @@ export type Result<T, E = string> =
 
 export const ok = <T>(value: T): Result<T, never> => ({ ok: true, value });
 export const err = <E>(error: E): Result<never, E> => ({ ok: false, error });
+
+/**
+ * Convierte un monto en formato colombiano ("150.000,00") a centavos enteros.
+ * Miles con ".", decimales con ",". Acepta también enteros sin decimales ("150.000").
+ */
+export function colombianAmountToCents(raw: string): Cents {
+  const trimmed = raw.trim();
+  const normalized = trimmed.includes(",")
+    ? trimmed.replace(/\./g, "").replace(",", ".")
+    : trimmed.replace(/\./g, "");
+  const pesos = Number(normalized);
+  if (!Number.isFinite(pesos)) throw new RangeError(`Monto inválido: ${raw}`);
+  return toCents(Math.round(pesos * 100));
+}
+
+/**
+ * Normaliza una fecha/hora local de Colombia (America/Bogota, UTC-5 fijo, sin DST)
+ * a un ISO 8601 en UTC. Acepta "YYYY-MM-DD HH:mm" o "DD/MM/YYYY HH:mm".
+ */
+export function bogotaToUtcIso(dateStr: string): string {
+  const iso = dateStr.match(/(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})/);
+  if (iso) {
+    const [, y, mo, d, h, mi] = iso;
+    return new Date(`${y}-${mo}-${d}T${h}:${mi}:00-05:00`).toISOString();
+  }
+  const dmy = dateStr.match(/(\d{2})\/(\d{2})\/(\d{4})[ T](\d{2}):(\d{2})/);
+  if (dmy) {
+    const [, d, mo, y, h, mi] = dmy;
+    return new Date(`${y}-${mo}-${d}T${h}:${mi}:00-05:00`).toISOString();
+  }
+  throw new RangeError(`Fecha inválida: ${dateStr}`);
+}
