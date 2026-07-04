@@ -15,6 +15,8 @@ const envSchema = z.object({
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
   /// Dominio del buzón entrante (configurable — D1/D2). Placeholder hasta tener dominio propio.
   INBOUND_EMAIL_DOMAIN: z.string().default("inbound.check.local"),
+  /// Secreto compartido para autenticar el webhook de Postmark Inbound (E04-T1).
+  POSTMARK_INBOUND_SECRET: z.string().default("dev-inbound-secret"),
 });
 
 export type ApiEnv = z.infer<typeof envSchema>;

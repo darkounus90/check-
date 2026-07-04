@@ -1,0 +1,9 @@
+De: avisos@bbva.com.co
+Para: pagos-abc123@inbound.check.local
+Asunto: Abono a su cuenta
+
+BBVA le informa: abono por valor de $220.000,00 a la cuenta terminada en 4455.
+No. de operacion 123456789
+2026-07-03 16:40
+
+[FIXTURE SINTETICO — reemplazar por correo real antes de produccion]

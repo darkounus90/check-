@@ -1,0 +1,11 @@
+De: alertasyavisos@bancolombia.com.co
+Para: pagos-abc123@inbound.check.local
+Asunto: Recibiste una transferencia
+
+Bancolombia te informa:
+Recibiste una transferencia por $150.000,00 en tu cuenta de ahorros *8842.
+Comprobante No. 9087654321
+Fecha: 2026-07-03 14:22
+
+Este es un correo automatico, no responder.
+[FIXTURE SINTETICO — reemplazar por correo real antes de produccion]

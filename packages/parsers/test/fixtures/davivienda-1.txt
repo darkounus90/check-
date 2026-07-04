@@ -1,0 +1,9 @@
+De: notificaciones@davivienda.com
+Para: pagos-abc123@inbound.check.local
+Asunto: Transferencia recibida
+
+Davivienda: Has recibido $75.500,00 en tu cuenta 001234.
+Referencia 5566778899
+03/07/2026 09:15
+
+[FIXTURE SINTETICO — reemplazar por correo real antes de produccion]

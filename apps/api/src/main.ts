@@ -8,7 +8,7 @@ import { env } from "./env";
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule);
   await app.listen(env.PORT);
-  // eslint-disable-next-line no-console
+
   console.log(`[api] escuchando en http://localhost:${env.PORT}`);
 }
 
