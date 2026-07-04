@@ -3,7 +3,7 @@
   "name": "e01-t14-ci",
   "title": "E01-T14 CI basico GitHub Actions",
   "description": "workflow corre install/build/lint/typecheck/test en push/PR, verde",
-  "status": "planning",
+  "status": "in_progress",
   "dev_type": null,
   "scope": null,
   "package": null,

@@ -3,7 +3,7 @@
   "name": "e01-t13-env",
   "title": "E01-T13 Env tipado + .env.example",
   "description": "validacion Zod de env por app; .env.example documentado",
-  "status": "planning",
+  "status": "in_progress",
   "dev_type": null,
   "scope": null,
   "package": null,

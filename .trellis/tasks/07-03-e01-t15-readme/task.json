@@ -3,7 +3,7 @@
   "name": "e01-t15-readme",
   "title": "E01-T15 README raiz del monorepo",
   "description": "comandos, mapa de apps/packages, como correr checks",
-  "status": "planning",
+  "status": "in_progress",
   "dev_type": null,
   "scope": null,
   "package": null,
