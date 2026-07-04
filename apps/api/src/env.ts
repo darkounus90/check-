@@ -13,6 +13,8 @@ const envSchema = z.object({
   DATABASE_URL: z.string().min(1),
   /// Secret key de Supabase (Admin API: crear usuarios/cajeros). Nunca se loguea.
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
+  /// Dominio del buzón entrante (configurable — D1/D2). Placeholder hasta tener dominio propio.
+  INBOUND_EMAIL_DOMAIN: z.string().default("inbound.check.local"),
 });
 
 export type ApiEnv = z.infer<typeof envSchema>;
