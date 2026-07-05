@@ -199,9 +199,19 @@ importers:
 
   packages/verifier:
     dependencies:
+      '@check/ocr':
+        specifier: workspace:*
+        version: link:../ocr
+      '@check/parsers':
+        specifier: workspace:*
+        version: link:../parsers
       '@check/shared':
         specifier: workspace:*
         version: link:../shared
+    devDependencies:
+      tsx:
+        specifier: ^4.19.2
+        version: 4.22.5
 
   packages/whatsapp:
     dependencies:
