@@ -12,3 +12,7 @@ export const VOUCHER_IMAGE_DOWNLOADER = Symbol("VOUCHER_IMAGE_DOWNLOADER");
 
 /** Token de inyección Nest para la función de normalización de imagen (sharp). */
 export const NORMALIZE_IMAGE = Symbol("NORMALIZE_IMAGE");
+
+/** Token de inyección Nest para encolar la verificación antifraude (E06-T12) al
+ * terminar el OCR con éxito. Ver `ocr.service.ts`/`ocr.module.ts`. */
+export const VERIFICATION_ENQUEUER = Symbol("VERIFICATION_ENQUEUER");

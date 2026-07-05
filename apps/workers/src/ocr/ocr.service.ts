@@ -5,7 +5,12 @@ import { Inject, Injectable, Logger } from "@nestjs/common";
 
 import { PrismaService } from "../database/prisma.service";
 import type { VoucherImageDownloader } from "../storage/storage.service";
-import { NORMALIZE_IMAGE, OCR_PROVIDER, VOUCHER_IMAGE_DOWNLOADER } from "./ocr.constants";
+import {
+  NORMALIZE_IMAGE,
+  OCR_PROVIDER,
+  VERIFICATION_ENQUEUER,
+  VOUCHER_IMAGE_DOWNLOADER,
+} from "./ocr.constants";
 
 /** Registro de banco emisor detectado (string, ej. "nequi") → enum `IssuerBank` de Prisma. */
 const ISSUER_BANK_MAP: Record<string, IssuerBank> = {
@@ -48,6 +53,21 @@ export interface VoucherStore {
   };
 }
 
+/** Contrato mínimo para encolar la verificación antifraude de un comprobante ya
+ * procesado por OCR (E06-T12, ver `apps/workers/src/verification/verification.queue.ts`). */
+export interface VerificationEnqueuer {
+  enqueueVerification(voucherId: string): Promise<void>;
+}
+
+/** Default no-op: si no se inyecta un enqueuer real (ver `ocr.module.ts`), el OCR
+ * simplemente no encola nada — mantiene `OcrService` funcional de forma aislada
+ * (ej. en tests que no les interesa la integración con verificación). */
+const noopVerificationEnqueuer: VerificationEnqueuer = {
+  async enqueueVerification() {
+    // intencionalmente vacío
+  },
+};
+
 /**
  * Servicio que ejecuta el pipeline de OCR de un `Voucher` (E05-T3):
  * descarga la imagen de Storage → normaliza → reconoce texto (Vision) → evalúa
@@ -69,6 +89,8 @@ export class OcrService {
     @Inject(OCR_PROVIDER) private readonly ocrProvider: OcrProvider,
     @Inject(NORMALIZE_IMAGE)
     private readonly normalize: (input: Uint8Array) => Promise<Uint8Array> = normalizeImage,
+    @Inject(VERIFICATION_ENQUEUER)
+    private readonly verificationEnqueuer: VerificationEnqueuer = noopVerificationEnqueuer,
   ) {}
 
   async process(voucherId: string): Promise<void> {
@@ -129,5 +151,17 @@ export class OcrService {
         beneficiary: value.beneficiary,
       },
     });
+
+    // Momento natural para encolar la verificación antifraude (Épica 6, E06-T12): el
+    // comprobante ya tiene todos los campos que necesita el motor de defensas. Una
+    // falla al encolar no debe hacer fallar el job de OCR (ya persistido con éxito) ni
+    // reintentar el OCR completo; se loggea para investigar por separado.
+    try {
+      await this.verificationEnqueuer.enqueueVerification(voucherId);
+    } catch (error) {
+      this.logger.error(
+        `No se pudo encolar la verificación del voucher ${voucherId}: ${(error as Error).message}`,
+      );
+    }
   }
 }
