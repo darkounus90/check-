@@ -18,12 +18,14 @@
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint src",
-    "test": "tsx --test test/aggregate.test.ts test/state-machine.test.ts"
+    "test": "tsx --test \"test/**/*.test.ts\""
   },
   "dependencies": {
     "@check/ocr": "workspace:*",
     "@check/parsers": "workspace:*",
-    "@check/shared": "workspace:*"
+    "@check/shared": "workspace:*",
+    "exifr": "^7.1.3",
+    "sharp": "^0.34.0"
   },
   "devDependencies": {
     "tsx": "^4.19.2"

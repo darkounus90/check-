@@ -208,6 +208,12 @@ importers:
       '@check/shared':
         specifier: workspace:*
         version: link:../shared
+      exifr:
+        specifier: ^7.1.3
+        version: 7.1.3
+      sharp:
+        specifier: ^0.34.0
+        version: 0.34.5
     devDependencies:
       tsx:
         specifier: ^4.19.2
@@ -1422,6 +1428,9 @@ packages:
   etag@1.8.1:
     resolution: {integrity: sha512-aIL5Fx7mawVa300al2BnEE4iNvo1qETxLrPI/o05L7z6go7fCw1J6EQmbK4FmJ2AS7kgVF/KEZWufBfdClMcPg==}
     engines: {node: '>= 0.6'}
+
+  exifr@7.1.3:
+    resolution: {integrity: sha512-g/aje2noHivrRSLbAUtBPWFbxKdKhgj/xr1vATDdUXPOFYJlQ62Ft0oy+72V6XLIpDJfHs6gXLbBLAolqOXYRw==}
 
   express@5.2.1:
     resolution: {integrity: sha512-hIS4idWWai69NezIdRt2xFVofaF4j+6INOpJlVOLDO8zXGpUVEVzIYk12UUi2JzjEzWL3IOAxcTubgz9Po0yXw==}
@@ -3419,6 +3428,8 @@ snapshots:
   esutils@2.0.3: {}
 
   etag@1.8.1: {}
+
+  exifr@7.1.3: {}
 
   express@5.2.1:
     dependencies:

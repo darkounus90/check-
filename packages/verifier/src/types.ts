@@ -20,6 +20,13 @@ export interface BusinessDefenseConfig {
   readonly declaredBeneficiary?: string;
   /** Ventana de tiempo (minutos) para cruzar comprobante vs. correo (Defensa 1/4). */
   readonly verificationWindowMinutes?: number;
+  /**
+   * Umbral de intentos fallidos recientes del mismo cliente en la red (across-tenant)
+   * a partir del cual la Defensa 7 marca sospecha (E06-T9, D5). Si no se configura,
+   * la defensa usa un valor por defecto (ver `suspicious-patterns.ts`). Campo agregado
+   * en E06-T9; aditivo, no afecta a otras defensas.
+   */
+  readonly failedAttemptsThreshold?: number;
 }
 
 /**
