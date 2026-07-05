@@ -6,8 +6,14 @@ import { z } from "zod";
  */
 const envSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
-  // Cola de trabajos (BullMQ + Redis). Opcional en el esqueleto; requerida en la Épica 5+.
-  REDIS_URL: z.string().url().optional(),
+  /// Conexión Postgres (Prisma). La lee PrismaClient vía env("DATABASE_URL").
+  DATABASE_URL: z.string().min(1),
+  /// Cola de trabajos (BullMQ + Redis). Requerida desde la Épica 5 (E05-T3).
+  REDIS_URL: z.string().url(),
+  /// URL del proyecto Supabase (Storage: descarga de la imagen del comprobante).
+  SUPABASE_URL: z.string().url(),
+  /// Secret key de Supabase (Storage Admin API). Nunca se loguea.
+  SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
 });
 
 export type WorkersEnv = z.infer<typeof envSchema>;

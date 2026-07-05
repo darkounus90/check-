@@ -1,11 +1,14 @@
 import { Module } from "@nestjs/common";
 
+import { OcrModule } from "./ocr/ocr.module";
+
 /**
  * Módulo raíz de los workers.
  *
- * Placeholder de la Épica 1 (E01-T11). Los workers reales (OCR, verificación,
- * warmeo de WhatsApp) se registran aquí conforme avanzan las Épicas 5, 6 y 7,
- * consumiendo colas de BullMQ.
+ * OCR de comprobantes (E05-T3) ya está registrado vía `OcrModule`. Verificación
+ * y warmeo de WhatsApp (Épicas 6/7) se agregan aquí conforme avanzan.
  */
-@Module({})
+@Module({
+  imports: [OcrModule],
+})
 export class AppModule {}

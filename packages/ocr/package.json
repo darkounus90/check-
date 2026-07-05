@@ -11,15 +11,18 @@
       "default": "./dist/index.js"
     }
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint src",
-    "test": "tsx --test test/extractors.test.ts"
+    "test": "tsx --test test/extractors.test.ts test/google-vision.test.ts"
   },
   "dependencies": {
     "@check/shared": "workspace:*",
+    "@google-cloud/vision": "^5.3.7",
     "sharp": "^0.34.0"
   },
   "devDependencies": {

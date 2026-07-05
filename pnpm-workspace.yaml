@@ -6,9 +6,13 @@ packages:
 # - sharp: análisis/optimización de imágenes (Next.js + motor de verificación, Épica 6)
 # - prisma / @prisma/*: descarga de query engines (ORM, Épica 2)
 # - esbuild: usado por tsx para ejecutar scripts TS (seed, etc.)
+# - protobufjs: dependencia transitiva de @google-cloud/vision (E05-T1); su postinstall
+#   solo genera bindings JS de protobuf, no compila nativo.
 allowBuilds:
   sharp: true
   prisma: true
   "@prisma/client": true
   "@prisma/engines": true
   esbuild: true
+  protobufjs: true
+  msgpackr-extract: true

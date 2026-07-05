@@ -67,6 +67,15 @@ enum NumberHealth {
   BANNED
 }
 
+/// Estado del pipeline de OCR de un Voucher (E05-T3). No confundir con VerdictStatus
+/// (veredicto antifraude de la Transaction, Épica 6): esto es sobre la calidad/éxito del OCR.
+enum OcrStatus {
+  PENDING // aún no procesado
+  PROCESSED // OCR + extracción exitosos
+  LOW_QUALITY // texto insuficiente/ilegible: pedir mejor foto
+  FAILED // error permanente (ej. comprobante no reconocido por ningún extractor)
+}
+
 // ─────────────────────────────────────────────────────────────
 // Identidad y multi-tenant (E02-T3)
 // ─────────────────────────────────────────────────────────────
@@ -168,6 +177,8 @@ model Voucher {
   /// Ruta al artefacto de imagen/PDF (encriptado en reposo, Épica 12).
   storagePath String?
   ocrText     String?
+  /// Estado del pipeline de OCR (E05-T3). Distinto de VerdictStatus (Transaction, Épica 6).
+  ocrStatus   OcrStatus @default(PENDING)
 
   createdAt DateTime @default(now())
 

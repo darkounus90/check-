@@ -1,22 +1,85 @@
-import { err, type Result } from "@check/shared";
+import { err, ok, type Result } from "@check/shared";
 
 import type { OcrProvider } from "../types.js";
 
 /**
- * Punto de integración de Google Cloud Vision (E05-T1).
+ * Subconjunto del cliente de `@google-cloud/vision` (`ImageAnnotatorClient`) que
+ * este provider necesita. Permite inyectar un cliente fake en tests sin depender
+ * del tipo real del SDK.
+ */
+export interface VisionClientLike {
+  documentTextDetection(request: {
+    image: { content: Uint8Array };
+  }): Promise<[{ fullTextAnnotation?: { text?: string | null } | null }]>;
+}
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+/** Forma mínima del módulo `@google-cloud/vision` que este provider consume. */
+interface VisionModuleLike {
+  ImageAnnotatorClient: new () => VisionClientLike;
+}
+
+/** Carga real del SDK vía import dinámico (no acopla el build a la credencial). */
+function loadVisionSdk(): Promise<VisionModuleLike> {
+  return import("@google-cloud/vision") as unknown as Promise<VisionModuleLike>;
+}
+
+/**
+ * Integración con Google Cloud Vision (E05-T1): usa `documentTextDetection` para
+ * extraer el texto plano de un comprobante (imagen/PDF como bytes).
  *
- * Para activarlo en producción:
- *   1. `pnpm --filter @check/ocr add @google-cloud/vision`
- *   2. Configura `GOOGLE_APPLICATION_CREDENTIALS` (JSON de service account).
- *   3. Implementa `recognize` con `documentTextDetection` (import dinámico del SDK).
+ * El SDK (`@google-cloud/vision`) se importa dinámicamente (`await import(...)`)
+ * para no acoplar el build/tests del monorepo a la credencial de servicio. La
+ * autenticación real la resuelve el SDK por convención estándar
+ * (`GOOGLE_APPLICATION_CREDENTIALS` apuntando al JSON de la service account).
  *
- * Se deja como placeholder para no acoplar la credencial/SDK al build del MVP.
+ * Para tests: inyecta un `VisionClientLike` fake por el constructor (evita red real
+ * y permite simular éxito/error de Vision), y/o un `loadSdk` fake para simular que
+ * el import dinámico del SDK falla (sin credencial/paquete disponible).
  */
 export class GoogleVisionProvider implements OcrProvider {
-  async recognize(_input: Uint8Array): Promise<Result<string>> {
-    return err(
-      "Google Vision no configurado (E05-T1): instala @google-cloud/vision y credenciales.",
-    );
+  private client: VisionClientLike | undefined;
+  private readonly loadSdk: () => Promise<VisionModuleLike>;
+
+  constructor(client?: VisionClientLike, loadSdk: () => Promise<VisionModuleLike> = loadVisionSdk) {
+    this.client = client;
+    this.loadSdk = loadSdk;
+  }
+
+  /** Resuelve el cliente inyectado o crea uno real vía import dinámico del SDK. */
+  private async getClient(): Promise<Result<VisionClientLike>> {
+    if (this.client) return ok(this.client);
+
+    try {
+      const { ImageAnnotatorClient } = await this.loadSdk();
+      this.client = new ImageAnnotatorClient();
+      return ok(this.client);
+    } catch (error) {
+      return err(
+        `Google Vision no disponible: no se pudo cargar @google-cloud/vision (${errorMessage(error)}).`,
+      );
+    }
+  }
+
+  async recognize(input: Uint8Array): Promise<Result<string>> {
+    const clientResult = await this.getClient();
+    if (!clientResult.ok) return clientResult;
+
+    try {
+      const [response] = await clientResult.value.documentTextDetection({
+        image: { content: input },
+      });
+      const text = response.fullTextAnnotation?.text;
+      if (!text) {
+        return err("Google Vision no detectó texto en el comprobante.");
+      }
+      return ok(text);
+    } catch (error) {
+      return err(`Google Vision falló al procesar el comprobante: ${errorMessage(error)}.`);
+    }
   }
 }
 
@@ -27,7 +90,6 @@ export class GoogleVisionProvider implements OcrProvider {
 export class TextOcrProvider implements OcrProvider {
   constructor(private readonly text: string) {}
   async recognize(): Promise<Result<string>> {
-    const { ok } = await import("@check/shared");
     return ok(this.text);
   }
 }

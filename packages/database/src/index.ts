@@ -7,6 +7,7 @@ export {
   IssuerBank,
   MailboxStatus,
   NumberHealth,
+  OcrStatus,
   ReceiverBank,
   Role,
   VerdictStatus,
