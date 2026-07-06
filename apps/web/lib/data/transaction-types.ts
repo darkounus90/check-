@@ -38,10 +38,10 @@ export interface TransactionFilters {
 /**
  * Aplica los filtros del histórico EN CLIENTE sobre el listado disponible.
  *
- * Se filtra sobre el resultado ya cargado (no en la base) a propósito: mientras no exista
- * un endpoint de listado con parámetros de filtro en `apps/api`, esta es la única opción
- * sin tocar el backend (fuera de alcance). Es puro y testeable; cuando el backend exponga
- * filtros server-side, esta función se reemplaza por query params sin cambiar la UI.
+ * La fuente de verdad del filtrado es server-side: `listTransactions(filters)` (gap #8) manda
+ * los filtros como query params y el backend filtra en la BD dentro de `runAsTenant`. Esta
+ * función pura queda como RESPALDO para el ajuste interactivo en el histórico (togglear
+ * estados/fechas/cuenta sin recargar la página), coherente con el filtro server-side.
  */
 export function applyTransactionFilters(
   transactions: DashboardTransaction[],

@@ -1,0 +1,2 @@
+{"file": ".trellis/spec/backend/index.md", "reason": "convenciones NestJS: controllers/services, guards E03, RLS via TenantService"}
+{"file": ".trellis/spec/frontend/index.md", "reason": "convenciones apps/web: data layer server-only, client components, tipos"}

@@ -7,18 +7,18 @@ import { Button } from "@/components/ui/button";
 import {
   ACCEPTED_VOUCHER_MIME_TYPES,
   PublicApiError,
-  uploadVoucher,
+  uploadVoucherAuthenticated,
   validateVoucherFile,
 } from "@/lib/public-api";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 /**
- * Subida de comprobante desde el dashboard autenticado (E10-T3).
+ * Subida de comprobante desde el dashboard autenticado (E10-T3 + gap #9).
  *
- * Reutiliza el cliente de subida existente (`uploadVoucher`, ruta pública) porque no hay
- * endpoint autenticado de vouchers (ver lib/data/voucher-link.ts para el GAP). Se pasa el
- * `opaqueId` del negocio del cajero resuelto server-side; si es null, el componente no se
- * renderiza (la página muestra el aviso). Al terminar, notifica al padre para que refetch-ee
- * el estado en vivo, sin recargar la página.
+ * Sube por el endpoint AUTENTICADO `POST /vouchers`: el negocio del cajero se resuelve
+ * server-side por el JWT (no por opaqueId), así el operador no necesita configurar nada. El
+ * access token de Supabase se lee del cliente de navegador (mismas cookies que la sesión).
+ * Al terminar, notifica al padre para que refetch-ee el estado en vivo, sin recargar.
  */
 
 type Phase = "idle" | "uploading" | "error";
@@ -32,10 +32,8 @@ function formatFileSize(bytes: number): string {
 }
 
 export function UploadVoucher({
-  opaqueId,
   onUploaded,
 }: {
-  opaqueId: string;
   onUploaded: () => void;
 }) {
   const cameraInputRef = useRef<HTMLInputElement>(null);
@@ -84,7 +82,15 @@ export function UploadVoucher({
     setProgress(0);
     setUploadError(null);
     try {
-      await uploadVoucher(opaqueId, selectedFile, { onProgress: setProgress });
+      const supabase = createSupabaseBrowserClient();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const accessToken = session?.access_token;
+      if (!accessToken) {
+        throw new PublicApiError("Tu sesión expiró. Vuelve a iniciar sesión.", 401);
+      }
+      await uploadVoucherAuthenticated(accessToken, selectedFile, { onProgress: setProgress });
       setPhase("idle");
       setSelectedFile(null);
       setProgress(0);

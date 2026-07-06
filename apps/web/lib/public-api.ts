@@ -137,20 +137,24 @@ function uploadErrorMessage(status: number): string {
 }
 
 /**
- * `POST /public/n/:opaqueId/vouchers` — sube el comprobante como
- * multipart/form-data (campo `file`). Usa XMLHttpRequest para poder reportar
- * el progreso de subida (fetch aún no lo expone de forma amplia).
+ * Sube un comprobante (multipart/form-data, campo `file`) por XHR para poder reportar el
+ * progreso (fetch aún no lo expone de forma amplia). Núcleo compartido por la subida pública
+ * (`/public/n/:opaqueId/vouchers`) y la autenticada del dashboard (`/vouchers`, gap #9): la
+ * única diferencia es la URL y la cabecera `Authorization` opcional.
  */
-export function uploadVoucher(
-  opaqueId: string,
+function uploadVoucherRequest(
+  url: string,
   file: File,
-  options: UploadVoucherOptions = {},
+  options: UploadVoucherOptions & { authToken?: string } = {},
 ): Promise<VoucherUploadResult> {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
 
-    xhr.open("POST", `${apiBaseUrl()}/public/n/${encodeURIComponent(opaqueId)}/vouchers`);
+    xhr.open("POST", url);
     xhr.responseType = "json";
+    if (options.authToken) {
+      xhr.setRequestHeader("authorization", `Bearer ${options.authToken}`);
+    }
 
     const { onProgress } = options;
     if (onProgress) {
@@ -187,6 +191,38 @@ export function uploadVoucher(
     const formData = new FormData();
     formData.append("file", file);
     xhr.send(formData);
+  });
+}
+
+/**
+ * `POST /public/n/:opaqueId/vouchers` — subida PÚBLICA (PWA de fallback, sin login).
+ */
+export function uploadVoucher(
+  opaqueId: string,
+  file: File,
+  options: UploadVoucherOptions = {},
+): Promise<VoucherUploadResult> {
+  return uploadVoucherRequest(
+    `${apiBaseUrl()}/public/n/${encodeURIComponent(opaqueId)}/vouchers`,
+    file,
+    options,
+  );
+}
+
+/**
+ * `POST /vouchers` — subida AUTENTICADA del dashboard (cajero/dueño, gap #9). El negocio se
+ * resuelve server-side por el JWT (no por opaqueId); solo hace falta el access token de
+ * Supabase. Reutiliza el mismo pipeline (Storage + cola OCR) que la ruta pública, así el
+ * semáforo en vivo sigue polleando `GET /public/vouchers/:voucherId` con el mismo voucherId.
+ */
+export function uploadVoucherAuthenticated(
+  accessToken: string,
+  file: File,
+  options: UploadVoucherOptions = {},
+): Promise<VoucherUploadResult> {
+  return uploadVoucherRequest(`${apiBaseUrl()}/vouchers`, file, {
+    ...options,
+    authToken: accessToken,
   });
 }
 

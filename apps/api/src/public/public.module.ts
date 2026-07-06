@@ -63,5 +63,8 @@ import { VoucherStorageService } from "./voucher-storage.service";
     { provide: VOUCHER_STORAGE_UPLOADER, useClass: VoucherStorageService },
     { provide: OCR_ENQUEUER, useClass: OcrQueueService },
   ],
+  // Exportado para que la subida autenticada del cajero (gap #9, `VouchersController`)
+  // reutilice EXACTAMENTE el mismo pipeline (Storage + cola OCR) sin duplicarlo.
+  exports: [PublicVouchersService],
 })
 export class PublicModule {}

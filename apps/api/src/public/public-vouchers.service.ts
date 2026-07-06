@@ -93,7 +93,19 @@ export class PublicVouchersService {
     file: UploadedVoucherFile,
   ): Promise<{ voucherId: string }> {
     const business = await this.findBusiness(opaqueId);
+    return this.ingestForBusiness(business.id, file);
+  }
 
+  /**
+   * Núcleo de la ingesta: valida, sube a Storage, crea el `Voucher` y lo encola al MISMO
+   * pipeline OCR → verificación. El `businessId` YA está resuelto server-side por el caller
+   * (por `opaqueId` en la ruta pública E09-T4, o por el JWT en la subida autenticada del
+   * cajero — gap #9). Reutilizado por ambos canales para no duplicar el pipeline.
+   */
+  async ingestForBusiness(
+    businessId: string,
+    file: UploadedVoucherFile,
+  ): Promise<{ voucherId: string }> {
     const extension = ALLOWED_VOUCHER_MIME_TYPES[file.mimetype];
     if (!extension) {
       throw new UnsupportedMediaTypeException(`Tipo de archivo no soportado: ${file.mimetype}`);
@@ -106,17 +118,17 @@ export class PublicVouchersService {
 
     // Nombre no adivinable dentro del prefijo del negocio: el bucket es privado y
     // nada de la ruta se expone al cliente (solo recibe el id del Voucher).
-    const storagePath = `${business.id}/${randomUUID()}.${extension}`;
+    const storagePath = `${businessId}/${randomUUID()}.${extension}`;
     await this.storage.uploadVoucher(storagePath, file.buffer, file.mimetype);
 
     const voucher = await this.prisma.voucher.create({
-      data: { businessId: business.id, storagePath },
+      data: { businessId, storagePath },
     });
 
     // Si el encolado falla (Redis caído) se propaga como 500: el Voucher quedaría
     // PENDING sin job y el cliente debe reintentar la subida.
     await this.ocrQueue.enqueueVoucherOcr(voucher.id);
-    this.logger.log(`Comprobante público ${voucher.id} encolado para OCR`);
+    this.logger.log(`Comprobante ${voucher.id} encolado para OCR`);
 
     return { voucherId: voucher.id };
   }

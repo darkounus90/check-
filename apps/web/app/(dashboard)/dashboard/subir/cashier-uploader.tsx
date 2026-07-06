@@ -38,12 +38,10 @@ function detectResolved(
 
 export function CashierUploader({
   businessId,
-  opaqueId,
   initialTransactions,
   initialError = false,
 }: {
   businessId: string;
-  opaqueId: string | null;
   initialTransactions: DashboardTransaction[];
   initialError?: boolean;
 }) {
@@ -103,17 +101,7 @@ export function CashierUploader({
         <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
           Nuevo comprobante
         </h2>
-        {opaqueId ? (
-          <UploadVoucher opaqueId={opaqueId} onUploaded={() => void refresh()} />
-        ) : (
-          <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
-            <p className="font-medium">La subida autenticada aún no está habilitada.</p>
-            <p className="mt-1">
-              Por ahora, comparte con el pagador el enlace público de tu negocio para que suba
-              su comprobante. El estado de las verificaciones aparece abajo en vivo.
-            </p>
-          </div>
-        )}
+        <UploadVoucher onUploaded={() => void refresh()} />
       </section>
 
       <section className="flex flex-col gap-3">

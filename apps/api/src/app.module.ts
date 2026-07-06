@@ -13,6 +13,9 @@ import { MailboxService } from "./mailbox/mailbox.service";
 import { MeController } from "./me/me.controller";
 import { QrController } from "./me/qr.controller";
 import { QrService } from "./me/qr.service";
+import { TransactionsController } from "./me/transactions.controller";
+import { TransactionsService } from "./me/transactions.service";
+import { VouchersController } from "./me/vouchers.controller";
 import { ObservabilityModule } from "./observability/observability.module";
 import { OnboardingController } from "./onboarding/onboarding.controller";
 import { OnboardingService } from "./onboarding/onboarding.service";
@@ -38,10 +41,12 @@ import { TenantModule } from "./tenant/tenant.module";
     HealthController,
     MeController,
     QrController,
+    TransactionsController,
+    VouchersController,
     OnboardingController,
     AccountsController,
     MailboxController,
   ],
-  providers: [OnboardingService, MailboxService, QrService],
+  providers: [OnboardingService, MailboxService, QrService, TransactionsService],
 })
 export class AppModule {}

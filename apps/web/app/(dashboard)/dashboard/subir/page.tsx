@@ -2,13 +2,13 @@ import { redirect } from "next/navigation";
 
 import { getDashboardSession } from "@/lib/auth/session";
 import { type DashboardTransaction, listTransactions } from "@/lib/data/transactions";
-import { getCashierUploadLink } from "@/lib/data/voucher-link";
 
 import { CashierUploader } from "./cashier-uploader";
 
 /**
- * Vista "Subir comprobante" (cajero y dueño) — E10-T3/T4/T5.
- * Sube el comprobante, muestra el estado en vivo (semáforo) y notifica al resolverse.
+ * Vista "Subir comprobante" (cajero y dueño) — E10-T3/T4/T5 + gap #9.
+ * Sube el comprobante por el endpoint AUTENTICADO `POST /vouchers` (el negocio se resuelve
+ * por el JWT server-side), muestra el estado en vivo (semáforo) y notifica al resolverse.
  * Los datos iniciales se cargan server-side (apiFetch, aislado por negocio); el resto
  * (subida + refetch en vivo + notificaciones) ocurre en el client component.
  */
@@ -17,8 +17,6 @@ export default async function SubirPage() {
   if (!session) {
     redirect("/login");
   }
-
-  const { opaqueId } = await getCashierUploadLink();
 
   let initialTransactions: DashboardTransaction[];
   let initialError = false;
@@ -39,7 +37,6 @@ export default async function SubirPage() {
       </div>
       <CashierUploader
         businessId={session.businessId}
-        opaqueId={opaqueId}
         initialTransactions={initialTransactions}
         initialError={initialError}
       />
