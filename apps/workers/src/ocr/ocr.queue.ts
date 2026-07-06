@@ -30,6 +30,29 @@ export class OcrQueueService implements OnModuleInit, OnModuleDestroy {
     await this.connection?.quit();
   }
 
+  /**
+   * Foto del estado de la cola para el monitor de colas atascadas (E11-T5): backlog en
+   * espera, jobs activos, fallidos acumulados y edad (ms) del job en espera más antiguo.
+   */
+  async getDepth(): Promise<{
+    queue: string;
+    waiting: number;
+    active: number;
+    failed: number;
+    oldestWaitingMs: number;
+  }> {
+    if (!this.queue) throw new Error("OcrQueueService no inicializado");
+    const [waiting, active, failed] = await Promise.all([
+      this.queue.getWaitingCount(),
+      this.queue.getActiveCount(),
+      this.queue.getFailedCount(),
+    ]);
+    // El job en espera más antiguo (índice 0 = cabeza de la cola FIFO).
+    const [oldest] = await this.queue.getWaiting(0, 0);
+    const oldestWaitingMs = oldest?.timestamp ? Math.max(0, Date.now() - oldest.timestamp) : 0;
+    return { queue: OCR_QUEUE_NAME, waiting, active, failed, oldestWaitingMs };
+  }
+
   /** Encola el OCR de un `Voucher` ya persistido con su imagen en Storage. */
   async enqueueVoucherOcr(voucherId: string): Promise<void> {
     if (!this.queue) throw new Error("OcrQueueService no inicializado");

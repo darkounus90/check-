@@ -6,6 +6,9 @@ import { z } from "zod";
  */
 const envSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
+  /// Puerto del endpoint HTTP de salud/métricas de los workers (E11-T8), consumible por el
+  /// hosting. Los workers no exponen API de negocio; solo health/readiness/metrics.
+  HEALTH_PORT: z.coerce.number().int().positive().default(3002),
   /// Conexión Postgres (Prisma). La lee PrismaClient vía env("DATABASE_URL").
   DATABASE_URL: z.string().min(1),
   /// Cola de trabajos (BullMQ + Redis). Requerida desde la Épica 5 (E05-T3).
@@ -29,6 +32,19 @@ const envSchema = z.object({
   WHATSAPP_BUSINESS_START_HOUR: z.coerce.number().int().min(0).max(23).optional(),
   WHATSAPP_BUSINESS_END_HOUR: z.coerce.number().int().min(1).max(24).optional(),
   WHATSAPP_BUSINESS_UTC_OFFSET_MINUTES: z.coerce.number().int().default(-300),
+
+  // ── Observabilidad (Épica 11) ──────────────────────────────
+  /// Webhook del canal de alertas del equipo (Slack o Discord). Si falta, las alertas se
+  /// loguean en JSON (nunca se pierden) pero no salen a un canal externo. (E11-T2)
+  ALERT_WEBHOOK_URL: z.string().url().optional(),
+  /// Estilo del webhook: `slack` (campo `text`) o `discord` (campo `content`). (E11-T2)
+  ALERT_WEBHOOK_STYLE: z.enum(["slack", "discord"]).default("slack"),
+  /// Umbrales del monitor de colas BullMQ (E11-T5). Backlog / jobs fallidos / edad del job
+  /// (ms) sobre los que se dispara alerta de cola atascada. Chequeo cada `QUEUE_MONITOR_INTERVAL_MS`.
+  QUEUE_MONITOR_INTERVAL_MS: z.coerce.number().int().positive().default(60_000),
+  QUEUE_MONITOR_MAX_WAITING: z.coerce.number().int().nonnegative().default(100),
+  QUEUE_MONITOR_MAX_FAILED: z.coerce.number().int().nonnegative().default(20),
+  QUEUE_MONITOR_MAX_OLDEST_MS: z.coerce.number().int().nonnegative().default(300_000),
 });
 
 export type WorkersEnv = z.infer<typeof envSchema>;

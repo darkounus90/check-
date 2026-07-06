@@ -47,6 +47,9 @@ importers:
       '@check/parsers':
         specifier: workspace:*
         version: link:../../packages/parsers
+      '@check/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
       '@nestjs/common':
         specifier: ^11.0.0
         version: 11.1.27(reflect-metadata@0.2.2)(rxjs@7.8.2)
@@ -233,6 +236,10 @@ importers:
       zod:
         specifier: ^3.24.1
         version: 3.25.76
+    devDependencies:
+      tsx:
+        specifier: ^4.19.2
+        version: 4.22.5
 
   packages/verifier:
     dependencies:

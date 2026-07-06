@@ -23,6 +23,13 @@ const envSchema = z.object({
   /// Dominio público donde vive la PWA/enrutador de QR (Épica 8). El QR impreso de cada
   /// negocio apunta a `${PUBLIC_APP_URL}/n/{opaqueId}`. Configurable por despliegue (D1).
   PUBLIC_APP_URL: z.string().url().default("http://localhost:3000"),
+
+  // ── Observabilidad (Épica 11) ──────────────────────────────
+  /// Webhook del canal de alertas del equipo (Slack o Discord). Si falta, las alertas se
+  /// loguean en JSON (nunca se pierden) pero no salen a un canal externo. (E11-T2)
+  ALERT_WEBHOOK_URL: z.string().url().optional(),
+  /// Estilo del webhook: `slack` (campo `text`) o `discord` (campo `content`). (E11-T2)
+  ALERT_WEBHOOK_STYLE: z.enum(["slack", "discord"]).default("slack"),
 });
 
 export type ApiEnv = z.infer<typeof envSchema>;

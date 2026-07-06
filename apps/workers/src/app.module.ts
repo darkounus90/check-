@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common";
 
+import { ObservabilityModule } from "./observability/observability.module";
 import { OcrModule } from "./ocr/ocr.module";
 import { VerificationModule } from "./verification/verification.module";
 import { WhatsAppModule } from "./whatsapp/whatsapp.module";
@@ -16,6 +17,6 @@ import { WhatsAppModule } from "./whatsapp/whatsapp.module";
  * se activa con `WHATSAPP_ENABLED=true`. Humanización/warmeo/pool (Grupos B/C) se suman aquí.
  */
 @Module({
-  imports: [OcrModule, VerificationModule, WhatsAppModule],
+  imports: [ObservabilityModule, OcrModule, VerificationModule, WhatsAppModule],
 })
 export class AppModule {}

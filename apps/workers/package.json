@@ -8,7 +8,7 @@
     "dev": "node --watch dist/main.js",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint src",
-    "test": "tsx --test test/env.test.ts test/ocr.service.test.ts test/verification.service.test.ts test/verification.context.test.ts test/verification.processor.test.ts test/whatsapp.store.test.ts"
+    "test": "tsx --import ./test/setup-env.ts --test test/env.test.ts test/ocr.service.test.ts test/verification.service.test.ts test/verification.context.test.ts test/verification.processor.test.ts test/whatsapp.store.test.ts test/ban-alert.test.ts test/queue-monitor.test.ts test/ocr-observer.test.ts test/global-error-capture.test.ts test/health.service.test.ts"
   },
   "dependencies": {
     "@check/database": "workspace:*",

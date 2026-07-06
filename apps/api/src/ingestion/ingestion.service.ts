@@ -1,9 +1,12 @@
 import { parseBankEmail } from "@check/parsers";
-import { Injectable, Logger } from "@nestjs/common";
+import { type MetricsRegistry, ParserFailureTracker } from "@check/shared";
+import { Inject, Injectable, Logger } from "@nestjs/common";
 import { BankEmailStatus, MailboxStatus, ReceiverBank } from "@prisma/client";
 
 import { PrismaService } from "../database/prisma.service";
 import { env } from "../env";
+import type { AlertPort } from "../observability/alert.port";
+import { ALERT_DISPATCHER, METRICS_REGISTRY } from "../observability/observability.tokens";
 
 /** Payload relevante de un webhook Inbound de Postmark. */
 export interface InboundEmail {
@@ -27,8 +30,16 @@ const BANK_MAP: Record<string, ReceiverBank> = {
 @Injectable()
 export class IngestionService {
   private readonly logger = new Logger("ingestion");
+  /** E11-T4: rastreo de fallos de parseo por ventana de correos (dispara alerta si una tanda
+   * cae mayormente en "no reconocido"). Estado de instancia porque `IngestionService` es
+   * singleton en Nest. */
+  private readonly parserTracker = new ParserFailureTracker({ source: "bank_email" });
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    @Inject(METRICS_REGISTRY) private readonly metrics: MetricsRegistry,
+    @Inject(ALERT_DISPATCHER) private readonly alerts: AlertPort,
+  ) {}
 
   async ingest(payload: InboundEmail): Promise<{ status: string; bankEmailId?: string }> {
     const recipient = payload.OriginalRecipient ?? payload.To ?? "";
@@ -44,6 +55,10 @@ export class IngestionService {
 
     const raw = [payload.From, payload.Subject, payload.TextBody].filter(Boolean).join("\n");
     const parsed = parseBankEmail(raw);
+
+    // E11-T4/T7: métrica de tasa de parseo por banco y detección de "parser dejó de matchear".
+    // La etiqueta es el banco reconocido (o "desconocido" si ningún parser matcheó).
+    this.recordParseOutcome(parsed.ok, parsed.ok ? parsed.value.bank : "desconocido");
 
     const bankEmail = await this.prisma.bankEmail.create({
       data: {
@@ -90,5 +105,19 @@ export class IngestionService {
   /** Verifica el secreto del webhook (E04-T1). */
   isAuthorized(token: string | undefined): boolean {
     return token === env.POSTMARK_INBOUND_SECRET;
+  }
+
+  /**
+   * E11-T4/T7: registra el resultado del parseo de un correo (métrica por banco) y alimenta el
+   * rastreador de ventana; si una tanda cae mayormente en "no reconocido", encola la alerta de
+   * parser que dejó de matchear. Aislado: no debe hacer fallar la ingesta si algo falla.
+   */
+  private recordParseOutcome(recognized: boolean, bank: string): void {
+    this.metrics.recordOutcome("bank_email_parse", bank, recognized);
+    const alert = this.parserTracker.record(recognized, bank);
+    if (alert) {
+      this.logger.warn(`Parser de correos dejó de matchear: ${JSON.stringify(alert.context)}`);
+      void this.alerts.dispatch(alert);
+    }
   }
 }

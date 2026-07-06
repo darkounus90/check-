@@ -13,6 +13,7 @@ import { PrismaService } from "../database/prisma.service";
 import type { VoucherImageDownloader } from "../storage/storage.service";
 import {
   NORMALIZE_IMAGE,
+  OCR_OBSERVER,
   OCR_PROVIDER,
   VERIFICATION_ENQUEUER,
   VOUCHER_IMAGE_DOWNLOADER,
@@ -82,6 +83,23 @@ const noopVerificationEnqueuer: VerificationEnqueuer = {
   },
 };
 
+/** Observador de observabilidad del OCR (Épica 11: métricas E11-T7 + alerta de parser E11-T4).
+ * Ver `ocr.observer.ts`. Se inyecta con un no-op por defecto para no acoplar los tests
+ * unitarios del pipeline a la capa de observabilidad. */
+export interface OcrObserverPort {
+  onExtractionResult(recognized: boolean, detectedBank: string | null): void;
+  recordProcessingDuration(ms: number): void;
+}
+
+const noopOcrObserver: OcrObserverPort = {
+  onExtractionResult() {
+    // intencionalmente vacío
+  },
+  recordProcessingDuration() {
+    // intencionalmente vacío
+  },
+};
+
 /**
  * Servicio que ejecuta el pipeline de OCR de un `Voucher` (E05-T3):
  * descarga la imagen de Storage → normaliza → reconoce texto (Vision) → evalúa
@@ -105,9 +123,12 @@ export class OcrService {
     private readonly normalize: (input: Uint8Array) => Promise<Uint8Array> = normalizeImage,
     @Inject(VERIFICATION_ENQUEUER)
     private readonly verificationEnqueuer: VerificationEnqueuer = noopVerificationEnqueuer,
+    @Inject(OCR_OBSERVER)
+    private readonly observer: OcrObserverPort = noopOcrObserver,
   ) {}
 
   async process(voucherId: string): Promise<void> {
+    const startedAt = Date.now();
     const voucher = await this.prisma.voucher.findUniqueOrThrow({ where: { id: voucherId } });
     if (!voucher.storagePath) {
       // Falla permanente de datos (no hay imagen que procesar): no tiene sentido reintentar.
@@ -152,6 +173,9 @@ export class OcrService {
     // Solo observabilidad: `extractVoucher` ya resuelve el extractor/banco internamente.
     const detectedBank = detectIssuerBank(ocrText);
     const extracted = extractVoucher(ocrText);
+    // E11-T4/T7: alimenta métricas de parseo por banco y la detección de "parser dejó de
+    // matchear" (una tanda de comprobantes no reconocidos dispara alerta).
+    this.observer.onExtractionResult(extracted.ok, detectedBank);
     if (!extracted.ok) {
       this.logger.warn(
         `Voucher ${voucherId}: comprobante no reconocido por ningún extractor ` +
@@ -161,6 +185,7 @@ export class OcrService {
         where: { id: voucherId },
         data: { ocrText, ocrStatus: OcrStatus.FAILED },
       });
+      this.observer.recordProcessingDuration(Date.now() - startedAt);
       return;
     }
 
@@ -190,5 +215,7 @@ export class OcrService {
         `No se pudo encolar la verificación del voucher ${voucherId}: ${(error as Error).message}`,
       );
     }
+
+    this.observer.recordProcessingDuration(Date.now() - startedAt);
   }
 }

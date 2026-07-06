@@ -1,6 +1,18 @@
 import { z } from "zod";
 
 /**
+ * Observabilidad (Épica 11): logger estructurado, cola/despachador de alertas,
+ * métricas de salud, health/readiness y constructores de alertas. Reexportados aquí
+ * de forma ADITIVA para que api/workers los consuman desde `@check/shared`.
+ */
+export * from "./alert-triggers.js";
+export * from "./alerts.js";
+export * from "./health.js";
+export * from "./logger.js";
+export * from "./metrics.js";
+export * from "./parser-failure-tracker.js";
+
+/**
  * Tipos y utilidades compartidas del monorepo CHECK.
  *
  * Convenciones (ver .trellis/spec/prd.md):

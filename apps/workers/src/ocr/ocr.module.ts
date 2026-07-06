@@ -8,10 +8,12 @@ import { VerificationModule } from "../verification/verification.module";
 import { VerificationQueueService } from "../verification/verification.queue";
 import {
   NORMALIZE_IMAGE,
+  OCR_OBSERVER,
   OCR_PROVIDER,
   VERIFICATION_ENQUEUER,
   VOUCHER_IMAGE_DOWNLOADER,
 } from "./ocr.constants";
+import { OcrObserver } from "./ocr.observer";
 import { OcrQueueService } from "./ocr.queue";
 import { OcrService } from "./ocr.service";
 import { OcrWorker } from "./ocr.worker";
@@ -28,10 +30,12 @@ import { OcrWorker } from "./ocr.worker";
     OcrService,
     OcrQueueService,
     OcrWorker,
+    OcrObserver,
     { provide: OCR_PROVIDER, useValue: new GoogleVisionProvider() },
     { provide: VOUCHER_IMAGE_DOWNLOADER, useExisting: StorageService },
     { provide: NORMALIZE_IMAGE, useValue: normalizeImage },
     { provide: VERIFICATION_ENQUEUER, useExisting: VerificationQueueService },
+    { provide: OCR_OBSERVER, useExisting: OcrObserver },
   ],
   exports: [OcrQueueService],
 })

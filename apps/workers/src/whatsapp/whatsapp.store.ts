@@ -317,6 +317,53 @@ export class WhatsAppStore
     const rows = await this.prisma.waNumber.findMany({ select: { id: true, health: true } });
     return rows.map((r) => ({ waNumberId: r.id, health: fromPrismaHealth(r.health) }));
   }
+
+  // ── E11-T3: contexto para la alerta de baneo ────────────────
+
+  /**
+   * Contexto de un baneo (Épica 11, E11-T3): qué número, cuántos negocios dependían de él,
+   * y si hay al menos un número SANO (no baneado/en warmeo) que sirva a esos negocios como
+   * reemplazo. Todo con datos ya persistidos, sin tocar Baileys.
+   */
+  async getBanContext(waNumberId: string): Promise<{
+    phoneNumber: string | null;
+    affectedBusinesses: number;
+    hasReplacement: boolean;
+    replacementNumberIds: string[];
+  }> {
+    const number = await this.prisma.waNumber.findUnique({
+      where: { id: waNumberId },
+      select: { phoneNumber: true },
+    });
+
+    // Negocios que dependían de este número.
+    const assignments = await this.prisma.numberPoolAssignment.findMany({
+      where: { waNumberId },
+      select: { businessId: true },
+    });
+    const affectedBusinessIds = [...new Set(assignments.map((a) => a.businessId))];
+
+    // Otros números sanos asignados a esos mismos negocios (reemplazo posible sin warmeo).
+    const replacements =
+      affectedBusinessIds.length === 0
+        ? []
+        : await this.prisma.numberPoolAssignment.findMany({
+            where: {
+              businessId: { in: affectedBusinessIds },
+              waNumberId: { not: waNumberId },
+              waNumber: { health: { notIn: [NumberHealth.BANNED, NumberHealth.WARMING] } },
+            },
+            select: { waNumberId: true },
+          });
+    const replacementNumberIds = [...new Set(replacements.map((r) => r.waNumberId))];
+
+    return {
+      phoneNumber: number?.phoneNumber ?? null,
+      affectedBusinesses: affectedBusinessIds.length,
+      hasReplacement: replacementNumberIds.length > 0,
+      replacementNumberIds,
+    };
+  }
 }
 
 /** Mapea el estado de salud del dominio (`@check/whatsapp`) al enum Prisma `NumberHealth`. */

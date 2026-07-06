@@ -9,6 +9,7 @@ import { MailboxService } from "./mailbox/mailbox.service";
 import { MeController } from "./me/me.controller";
 import { QrController } from "./me/qr.controller";
 import { QrService } from "./me/qr.service";
+import { ObservabilityModule } from "./observability/observability.module";
 import { OnboardingController } from "./onboarding/onboarding.controller";
 import { OnboardingService } from "./onboarding/onboarding.service";
 import { PublicModule } from "./public/public.module";
@@ -16,7 +17,14 @@ import { SupabaseModule } from "./supabase/supabase.module";
 import { TenantModule } from "./tenant/tenant.module";
 
 @Module({
-  imports: [DatabaseModule, TenantModule, SupabaseModule, IngestionModule, PublicModule],
+  imports: [
+    ObservabilityModule,
+    DatabaseModule,
+    TenantModule,
+    SupabaseModule,
+    IngestionModule,
+    PublicModule,
+  ],
   controllers: [
     HealthController,
     MeController,

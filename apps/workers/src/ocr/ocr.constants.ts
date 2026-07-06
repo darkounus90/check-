@@ -16,3 +16,7 @@ export const NORMALIZE_IMAGE = Symbol("NORMALIZE_IMAGE");
 /** Token de inyección Nest para encolar la verificación antifraude (E06-T12) al
  * terminar el OCR con éxito. Ver `ocr.service.ts`/`ocr.module.ts`. */
 export const VERIFICATION_ENQUEUER = Symbol("VERIFICATION_ENQUEUER");
+
+/** Token de inyección Nest para el observador de observabilidad del OCR (Épica 11:
+ * métricas de parseo por banco E11-T7 + alerta de parser que deja de matchear E11-T4). */
+export const OCR_OBSERVER = Symbol("OCR_OBSERVER");

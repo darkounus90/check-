@@ -15,7 +15,10 @@ import {
 } from "@nestjs/common";
 
 import { env } from "../env";
+import type { AlertPort } from "../observability/alert.port";
+import { ALERT_DISPATCHER } from "../observability/observability.tokens";
 import { StorageService } from "../storage/storage.service";
+import { BanAlertHealthStore } from "./ban-alert.service";
 import {
   VERDICT_POLL_BATCH_SIZE,
   VERDICT_POLL_INTERVAL_MS,
@@ -52,6 +55,7 @@ export class WhatsAppManager implements OnModuleInit, OnModuleDestroy {
   constructor(
     @Inject(WhatsAppStore) private readonly store: WhatsAppStore,
     @Inject(StorageService) private readonly storage: StorageService,
+    @Inject(ALERT_DISPATCHER) private readonly alerts: AlertPort,
   ) {}
 
   async onModuleInit(): Promise<void> {
@@ -80,9 +84,12 @@ export class WhatsAppManager implements OnModuleInit, OnModuleDestroy {
     // E07-T9: health check por número cada 60s. Vuelca a `WaNumber.health` el estado que cada
     // instancia mantiene (connected/degraded/banned). La lista se recalcula por tick para
     // reflejar altas/bajas del pool.
+    // E11-T3: interponemos un decorador que, al persistir salud, detecta la transición a
+    // `banned` y dispara la alerta de baneo con contexto (negocios afectados, reemplazo).
+    const healthStore = new BanAlertHealthStore(this.store, this.store, this.alerts);
     this.healthMonitor = new HealthMonitor({
       probe: { currentHealth: (id) => this.pool?.currentHealth(id) ?? null },
-      store: this.store,
+      store: healthStore,
       numbersToCheck: () => this.pool?.numberIds() ?? [],
       onError: (id, error) =>
         this.logger.error(`No se pudo persistir la salud de ${id}: ${errMsg(error)}`),

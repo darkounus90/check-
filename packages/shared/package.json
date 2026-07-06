@@ -18,9 +18,12 @@
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint src",
-    "test": "echo \"@check/shared: sin tests aun\""
+    "test": "tsx --test test/logger.test.ts test/alerts.test.ts test/alert-triggers.test.ts test/metrics.test.ts test/health.test.ts test/parser-failure-tracker.test.ts"
   },
   "dependencies": {
     "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.2"
   }
 }

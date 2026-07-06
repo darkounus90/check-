@@ -18,7 +18,16 @@
   "commit": null,
   "pr_url": null,
   "subtasks": [],
-  "children": [],
+  "children": [
+    "e11-t1-logger",
+    "e11-t2-alertas",
+    "e11-t3-baneo",
+    "e11-t4-parser",
+    "e11-t5-colas",
+    "e11-t6-captura",
+    "e11-t7-metricas",
+    "e11-t8-health"
+  ],
   "parent": null,
   "relatedFiles": [],
   "notes": "",
