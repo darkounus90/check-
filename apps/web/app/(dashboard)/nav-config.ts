@@ -18,6 +18,8 @@ export interface NavItem {
 export const NAV_ITEMS: readonly NavItem[] = [
   { href: "/dashboard/subir", label: "Subir comprobante", roles: ["CASHIER", "OWNER"] },
   { href: "/dashboard/historico", label: "Histórico", roles: ["OWNER"] },
+  { href: "/dashboard/alertas", label: "Alertas", roles: ["OWNER"] },
+  { href: "/dashboard/cuentas", label: "Cuentas", roles: ["OWNER"] },
 ];
 
 /** Ítems visibles para el rol dado. */

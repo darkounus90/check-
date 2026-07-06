@@ -1,11 +1,15 @@
 import { redirect } from "next/navigation";
 
-import { ComingSoon } from "@/app/(dashboard)/coming-soon";
 import { defaultRouteForRole, getDashboardSession } from "@/lib/auth/session";
+import { getReceivingAccounts, type ReceivingAccount } from "@/lib/data/accounts";
+import { type DashboardTransaction, listTransactions } from "@/lib/data/transactions";
+
+import { HistoryView } from "./history-view";
 
 /**
- * Vista "Histórico" (solo dueño). Contenido real en E10-T6. Placeholder.
- * Un cajero que llegue por URL directa es enviado a su vista por defecto.
+ * Vista "Histórico" (solo dueño) — E10-T6. Lista y filtra las transacciones del negocio.
+ * Un cajero que llegue por URL directa es enviado a su vista por defecto (defensa además
+ * de la nav filtrada por rol).
  */
 export default async function HistoricoPage() {
   const session = await getDashboardSession();
@@ -16,10 +20,27 @@ export default async function HistoricoPage() {
     redirect(defaultRouteForRole(session.role));
   }
 
+  let transactions: DashboardTransaction[] = [];
+  let accounts: ReceivingAccount[] = [];
+  let loadError = false;
+  try {
+    [transactions, accounts] = await Promise.all([
+      listTransactions(),
+      getReceivingAccounts().catch(() => []),
+    ]);
+  } catch {
+    loadError = true;
+  }
+
   return (
-    <ComingSoon
-      title="Histórico"
-      description="Aquí verás el histórico de transacciones de tu negocio con filtros y alertas."
-    />
+    <section className="flex flex-col gap-6">
+      <div>
+        <h1 className="text-2xl font-semibold tracking-tight">Histórico</h1>
+        <p className="mt-1 text-sm text-slate-600">
+          Todas las verificaciones de tu negocio, con filtros por estado, fecha y cuenta.
+        </p>
+      </div>
+      <HistoryView transactions={transactions} accounts={accounts} loadError={loadError} />
+    </section>
   );
 }

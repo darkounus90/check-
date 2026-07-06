@@ -18,7 +18,17 @@
   "commit": null,
   "pr_url": null,
   "subtasks": [],
-  "children": [],
+  "children": [
+    "07-06-e10-t1-auth-shell",
+    "07-06-e10-t2-data-rls",
+    "07-03-e10-t3-subir",
+    "07-03-e10-t4-estado-vivo",
+    "07-03-e10-t5-notificacion",
+    "07-03-e10-t6-historico",
+    "07-03-e10-t7-alertas",
+    "07-03-e10-t8-cuentas",
+    "07-03-e10-t9-estados"
+  ],
   "parent": null,
   "relatedFiles": [],
   "notes": "",

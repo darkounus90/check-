@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { DashboardNav } from "@/app/(dashboard)/dashboard-nav";
 import { LogoutButton } from "@/app/(dashboard)/logout-button";
 import { navItemsForRole } from "@/app/(dashboard)/nav-config";
+import { NotificationProvider } from "@/app/(dashboard)/notifications";
 import { getDashboardSession, roleLabel } from "@/lib/auth/session";
 
 /**
@@ -21,6 +22,7 @@ export default async function DashboardLayout({ children }: { children: ReactNod
   const items = navItemsForRole(session.role);
 
   return (
+    <NotificationProvider>
     <div className="flex min-h-screen flex-col">
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto flex max-w-5xl flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
@@ -41,5 +43,6 @@ export default async function DashboardLayout({ children }: { children: ReactNod
 
       <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8">{children}</main>
     </div>
+    </NotificationProvider>
   );
 }
