@@ -18,7 +18,15 @@
   "commit": null,
   "pr_url": null,
   "subtasks": [],
-  "children": [],
+  "children": [
+    "07-05-e09-t1-public-route",
+    "07-05-e09-t2-business-id",
+    "07-05-e09-t3-upload-component",
+    "07-05-e09-t4-public-ingest",
+    "07-05-e09-t5-live-result",
+    "07-05-e09-t6-error-states",
+    "07-05-e09-t7-rate-limit"
+  ],
   "parent": null,
   "relatedFiles": [],
   "notes": "",
