@@ -21,6 +21,7 @@ interface BaileysLogger {
 }
 
 import { type DbAuthState, useDbAuthState } from "./db-auth-state.js";
+import { disconnectStatusCode, healthFromDisconnect } from "./health.js";
 import {
   Humanizer,
   type HumanizerDeps,
@@ -40,6 +41,7 @@ import type {
   WarmupStore,
   WaSessionStore,
   WhatsAppInstanceCallbacks,
+  WhatsAppNumberHealth,
 } from "./types.js";
 import { canSend, registerSend } from "./warmup.js";
 
@@ -93,6 +95,12 @@ export class WhatsAppInstance {
   private socket: WASocket | undefined;
   private auth: DbAuthState | undefined;
   private stopped = false;
+  /**
+   * Estado de salud vigente en memoria del número (E07-T9). Arranca en `warming` (aún no
+   * conectado) y transiciona con los eventos `connection.update` de Baileys. Lo lee el
+   * health monitor / el pool vía `health()` para consultar y persistir el estado cada 60s.
+   */
+  private currentHealth: WhatsAppNumberHealth = "warming";
   /** Humanizador anti-baneo (E07-T4). Con defaults reales si no se inyecta config. */
   private readonly humanizer: Humanizer;
 
@@ -111,6 +119,21 @@ export class WhatsAppInstance {
     this.stopped = false;
     this.auth = await useDbAuthState(this.deps.sessionStore, this.deps.waNumberId);
     await this.connect();
+  }
+
+  /**
+   * Estado de salud vigente del número (E07-T9): `connected` cuando el socket está abierto,
+   * `degraded` en caídas transitorias (reconectando), `banned` si la sesión ya no sirve
+   * (logout/forbidden/badSession), `warming` antes de la primera conexión. Lo consulta el
+   * health monitor / el pool para `getPoolHealth()`. Es una lectura en memoria, sin I/O.
+   */
+  health(): WhatsAppNumberHealth {
+    return this.currentHealth;
+  }
+
+  /** Id del `WaNumber` que esta instancia representa (identidad para el pool E07-T7). */
+  get waNumberId(): string {
+    return this.deps.waNumberId;
   }
 
   /**
@@ -155,6 +178,7 @@ export class WhatsAppInstance {
         this.deps.callbacks?.onQr?.(qr);
       }
       if (connection === "open") {
+        this.currentHealth = "connected"; // E07-T9: número sano
         this.deps.logger.info(`Instancia ${this.deps.waNumberId} conectada`);
         this.deps.callbacks?.onConnected?.();
       }
@@ -177,14 +201,19 @@ export class WhatsAppInstance {
   private handleDisconnect(error: unknown): void {
     // El error de cierre es un Boom; su `output.statusCode` lleva el `DisconnectReason`.
     // Lo leemos estructuralmente para no depender de `@hapi/boom` directamente.
-    const statusCode = (error as { output?: { statusCode?: number } } | undefined)?.output
-      ?.statusCode;
+    const statusCode = disconnectStatusCode(error);
+    // E07-T9: mapea el motivo de cierre a un estado de salud consultable/persistible. Un
+    // `banned` (logout/forbidden/badSession/multideviceMismatch) es irrecuperable sin nuevo
+    // QR; un `degraded` es una caída transitoria que reconecta sola.
+    this.currentHealth = healthFromDisconnect(statusCode);
     const loggedOut = statusCode === DisconnectReason.loggedOut;
 
-    if (loggedOut) {
-      // Sesión inválida: el número fue deslogueado. Hará falta re-escanear QR; no
-      // reconectamos automáticamente (sería un bucle).
-      this.deps.logger.warn(`Instancia ${this.deps.waNumberId} deslogueada (se requiere nuevo QR)`);
+    if (this.currentHealth === "banned") {
+      // Sesión inválida/baneada: el número ya no sirve. Hará falta re-escanear QR / reemplazar
+      // el número; no reconectamos automáticamente (sería un bucle). El pool (E07-T7) dejará
+      // de enrutar a este número y la Épica 8 elegirá otro sano.
+      const reason = loggedOut ? "deslogueada" : `no utilizable (statusCode ${statusCode})`;
+      this.deps.logger.warn(`Instancia ${this.deps.waNumberId} ${reason} (se requiere nuevo QR)`);
       this.deps.callbacks?.onLoggedOut?.();
       return;
     }

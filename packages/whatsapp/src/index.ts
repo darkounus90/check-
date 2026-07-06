@@ -8,16 +8,39 @@
  * - E07-T3: responde el semáforo (🟡 al recibir, 🟢/🚨 al resolverse el veredicto) por
  *   una única función central `sendMessage`.
  *
- * Humanización, warmeo, pool multi-instancia, health y multi-tenant (Grupos B/C) son olas
- * posteriores; se enganchan en `sendMessage`/plantillas sin tocar los llamadores.
+ * Grupo B — humanización (E07-T4), rotación de plantillas (E07-T5) y warmeo (E07-T6),
+ * enganchados en `sendMessage`/plantillas sin tocar los llamadores.
+ *
+ * Grupo C — pool multi-instancia (E07-T7, `pool.ts`), asignación multi-tenant número↔negocios
+ * (E07-T8, `assignment.ts`), health checks por número cada 60s (E07-T9, `health.ts`) y
+ * persistencia total sobrevive-baneo (E07-T10, cubierta por los stores + test).
  */
 
+export {
+  type AssignableHealth,
+  businessesForNumber,
+  numberServesBusiness,
+  numbersForBusiness,
+  pickHealthyNumberForBusiness,
+  type PoolAssignment,
+} from "./assignment.js";
 export {
   type DbAuthState,
   deserializeAuthState,
   serializeAuthState,
   useDbAuthState,
 } from "./db-auth-state.js";
+export {
+  disconnectStatusCode,
+  HEALTH_CHECK_INTERVAL_MS,
+  healthFromDisconnect,
+  HealthMonitor,
+  type HealthMonitorDeps,
+  type HealthProbe,
+  type HealthStore,
+  type IntervalScheduler,
+  realIntervalScheduler,
+} from "./health.js";
 export {
   type BusinessHours,
   type Clock,
@@ -43,6 +66,15 @@ export {
   WhatsAppInstance,
   type WhatsAppInstanceDeps,
 } from "./instance.js";
+export {
+  asPoolInstance,
+  type InstanceFactory,
+  type PoolInstance,
+  type PoolLogger,
+  type PoolNumberHealth,
+  WhatsAppPool,
+  type WhatsAppPoolDeps,
+} from "./pool.js";
 export {
   type PickedTemplate,
   pickTemplate,

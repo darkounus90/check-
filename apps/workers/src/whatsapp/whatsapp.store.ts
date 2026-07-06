@@ -1,6 +1,9 @@
+import { NumberHealth } from "@check/database";
 import type {
   BusinessResolver,
+  HealthStore,
   OcrEnqueuer,
+  PoolAssignment,
   ResolvedVerdict,
   TemplateKindKey,
   TemplateRotationStore,
@@ -9,6 +12,7 @@ import type {
   WarmupStateSnapshot,
   WarmupStore,
   WaSessionStore,
+  WhatsAppNumberHealth,
 } from "@check/whatsapp";
 import { Inject, Injectable } from "@nestjs/common";
 
@@ -50,7 +54,8 @@ export class WhatsAppStore
     OcrEnqueuer,
     VoucherContextReader,
     TemplateRotationStore,
-    WarmupStore
+    WarmupStore,
+    HealthStore
 {
   constructor(
     @Inject(PrismaService) private readonly prisma: PrismaService,
@@ -159,6 +164,40 @@ export class WhatsAppStore
     });
   }
 
+  /**
+   * E07-T7 (poller multi-instancia): igual que `findPendingVerdictNotifications` pero para
+   * TODOS los números gestionados por el pool (no uno solo). Cada notificación lleva su
+   * `waNumberId` para que el pool la enrute a la instancia dueña.
+   */
+  async findPendingVerdictNotificationsForNumbers(
+    waNumberIds: readonly string[],
+    limit: number,
+  ): Promise<PendingVerdictNotification[]> {
+    if (waNumberIds.length === 0) return [];
+    const rows = await this.prisma.waVoucherContext.findMany({
+      where: {
+        waNumberId: { in: [...waNumberIds] },
+        notifiedAt: null,
+        voucher: {
+          transaction: { verdict: { in: ["VERIFIED", "SUSPICIOUS"] }, resolvedAt: { not: null } },
+        },
+      },
+      take: limit,
+      select: {
+        voucherId: true,
+        remoteJid: true,
+        waNumberId: true,
+        voucher: { select: { transaction: { select: { verdict: true } } } },
+      },
+    });
+
+    return rows.flatMap((row) => {
+      const verdict = row.voucher.transaction?.verdict;
+      if (verdict !== "VERIFIED" && verdict !== "SUSPICIOUS") return [];
+      return [{ voucherId: row.voucherId, remoteJid: row.remoteJid, waNumberId: row.waNumberId, verdict }];
+    });
+  }
+
   /** Marca un comprobante como ya respondido (idempotencia del poller E07-T3). */
   async markNotified(voucherId: string): Promise<void> {
     await this.prisma.waVoucherContext.update({
@@ -225,5 +264,85 @@ export class WhatsAppStore
         warmupSentInWindow: state.sentInWindow,
       },
     });
+  }
+
+  // ── E07-T7: números a levantar en el pool ───────────────────
+
+  /**
+   * Ids de los `WaNumber` que el orquestador (E07-T7) debe levantar al arrancar: los que ya
+   * pasaron el warmeo (health != WARMING) y no están baneados. Un número baneado no se levanta
+   * (la Épica 8 no le enrutaría igualmente); uno en warmeo aún no entra al pool (E07-T6).
+   */
+  async listPoolableNumberIds(): Promise<string[]> {
+    const rows = await this.prisma.waNumber.findMany({
+      where: { health: { notIn: [NumberHealth.WARMING, NumberHealth.BANNED] } },
+      select: { id: true },
+    });
+    return rows.map((r) => r.id);
+  }
+
+  // ── E07-T8: asignación multi-tenant número↔negocios ─────────
+
+  /**
+   * Todas las asignaciones número↔negocio (`NumberPoolAssignment`) para resolver el mapeo
+   * multi-tenant (E07-T8) con las funciones puras de `@check/whatsapp`. Devuelve la forma que
+   * espera `PoolAssignment` (prioridad + alta en epoch ms).
+   */
+  async listAssignments(): Promise<PoolAssignment[]> {
+    const rows = await this.prisma.numberPoolAssignment.findMany({
+      select: { waNumberId: true, businessId: true, priority: true, createdAt: true },
+    });
+    return rows.map((r) => ({
+      waNumberId: r.waNumberId,
+      businessId: r.businessId,
+      priority: r.priority,
+      createdAtMs: r.createdAt.getTime(),
+    }));
+  }
+
+  // ── E07-T9: persistencia del estado de salud por número ─────
+
+  async saveHealth(waNumberId: string, health: WhatsAppNumberHealth): Promise<void> {
+    await this.prisma.waNumber.update({
+      where: { id: waNumberId },
+      data: { health: toPrismaHealth(health) },
+    });
+  }
+
+  /**
+   * E07-T9 (consulta): salud actual de todos los números del pool, para la Épica 8 (selección
+   * de número sano). Espejo persistido de lo que el `HealthMonitor` vuelca cada 60s.
+   */
+  async getPoolHealth(): Promise<Array<{ waNumberId: string; health: WhatsAppNumberHealth }>> {
+    const rows = await this.prisma.waNumber.findMany({ select: { id: true, health: true } });
+    return rows.map((r) => ({ waNumberId: r.id, health: fromPrismaHealth(r.health) }));
+  }
+}
+
+/** Mapea el estado de salud del dominio (`@check/whatsapp`) al enum Prisma `NumberHealth`. */
+function toPrismaHealth(health: WhatsAppNumberHealth): NumberHealth {
+  switch (health) {
+    case "connected":
+      return NumberHealth.CONNECTED;
+    case "degraded":
+      return NumberHealth.DEGRADED;
+    case "banned":
+      return NumberHealth.BANNED;
+    case "warming":
+      return NumberHealth.WARMING;
+  }
+}
+
+/** Mapea el enum Prisma `NumberHealth` de vuelta al estado de salud del dominio. */
+function fromPrismaHealth(health: NumberHealth): WhatsAppNumberHealth {
+  switch (health) {
+    case NumberHealth.CONNECTED:
+      return "connected";
+    case NumberHealth.DEGRADED:
+      return "degraded";
+    case NumberHealth.BANNED:
+      return "banned";
+    case NumberHealth.WARMING:
+      return "warming";
   }
 }

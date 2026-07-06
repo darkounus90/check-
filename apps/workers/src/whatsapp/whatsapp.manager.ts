@@ -1,8 +1,10 @@
 import {
   type BusinessHours,
+  HealthMonitor,
   realSleep,
   type ResolvedVerdict,
   WhatsAppInstance,
+  WhatsAppPool,
 } from "@check/whatsapp";
 import {
   Inject,
@@ -21,22 +23,29 @@ import {
 import { WhatsAppStore } from "./whatsapp.store";
 
 /**
- * Proceso gestionado de la instancia WhatsApp en los workers (Épica 7, Grupo A). Levanta
- * UNA instancia Baileys (E07-T7 multi-instancia es otra ola) para el `WaNumber` configurado
- * por env, con auth-state persistido en Postgres (E07-T1), e ingesta/respuesta enganchadas
- * a los puertos implementados en `WhatsAppStore` (E07-T2/T3).
+ * Orquestador multi-instancia del pool WhatsApp en los workers (Épica 7, Grupo C).
  *
- * Se activa solo con `WHATSAPP_ENABLED=true` y `WHATSAPP_WA_NUMBER_ID` presente; si no,
- * los workers corren solo el pipeline OCR/verificación (comportamiento anterior).
+ * E07-T7: levanta N `WhatsAppInstance` (una por `WaNumber` poolable), cada una con su
+ * auth-state persistido (E07-T1) y aislada de las demás (`WhatsAppPool`). Al arrancar, la
+ * lista de números a levantar sale de `store.listPoolableNumberIds()` (pasaron warmeo y no
+ * están baneados). Si `WHATSAPP_WA_NUMBER_ID` está fijado, se limita a ese número (modo
+ * single-número, compatible con Grupo A).
  *
- * `@check/whatsapp` es ESM y estos workers son CJS: se importa igual que el resto de
- * packages ESM del monorepo (`@check/database`, `@check/ocr`), vía el `require(ESM)` que
- * soporta Node ≥ 22 (probado en 24). No hace falta dynamic import.
+ * E07-T9: un `HealthMonitor` persiste la salud de cada número cada 60s (estado que las
+ * instancias mantienen desde los eventos de Baileys). La consulta de salud del pool para la
+ * Épica 8 vive en `store.getPoolHealth()`.
+ *
+ * E07-T3/T7: el poller de veredictos sondea los comprobantes resueltos de TODOS los números
+ * del pool y enruta cada respuesta a su instancia dueña.
+ *
+ * Se activa solo con `WHATSAPP_ENABLED=true`; si no, los workers corren solo el pipeline
+ * OCR/verificación (comportamiento anterior).
  */
 @Injectable()
 export class WhatsAppManager implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger("whatsapp-manager");
-  private instance: WhatsAppInstance | undefined;
+  private pool: WhatsAppPool | undefined;
+  private healthMonitor: HealthMonitor | undefined;
   private verdictPollTimer: NodeJS.Timeout | undefined;
   private polling = false;
 
@@ -47,16 +56,67 @@ export class WhatsAppManager implements OnModuleInit, OnModuleDestroy {
 
   async onModuleInit(): Promise<void> {
     if (!env.WHATSAPP_ENABLED) {
-      this.logger.log("WhatsApp deshabilitado (WHATSAPP_ENABLED=false): no se levanta instancia");
-      return;
-    }
-    const waNumberId = env.WHATSAPP_WA_NUMBER_ID;
-    if (!waNumberId) {
-      this.logger.error("WHATSAPP_ENABLED=true pero falta WHATSAPP_WA_NUMBER_ID: no se levanta instancia");
+      this.logger.log("WhatsApp deshabilitado (WHATSAPP_ENABLED=false): no se levanta el pool");
       return;
     }
 
-    this.instance = new WhatsAppInstance({
+    // El pool crea cada instancia bajo demanda vía esta factory (E07-T7): mismo cableado de
+    // puertos que el Grupo A, ahora por número.
+    this.pool = new WhatsAppPool({
+      logger: {
+        info: (msg) => this.logger.log(msg),
+        warn: (msg) => this.logger.warn(msg),
+        error: (msg) => this.logger.error(msg),
+      },
+      instanceFactory: (waNumberId) => this.buildInstance(waNumberId),
+    });
+
+    const numberIds = await this.resolveNumbersToStart();
+    if (numberIds.length === 0) {
+      this.logger.warn("No hay números poolables que levantar (¿todos en warmeo o baneados?)");
+    }
+    await this.pool.start(numberIds);
+
+    // E07-T9: health check por número cada 60s. Vuelca a `WaNumber.health` el estado que cada
+    // instancia mantiene (connected/degraded/banned). La lista se recalcula por tick para
+    // reflejar altas/bajas del pool.
+    this.healthMonitor = new HealthMonitor({
+      probe: { currentHealth: (id) => this.pool?.currentHealth(id) ?? null },
+      store: this.store,
+      numbersToCheck: () => this.pool?.numberIds() ?? [],
+      onError: (id, error) =>
+        this.logger.error(`No se pudo persistir la salud de ${id}: ${errMsg(error)}`),
+    });
+    this.healthMonitor.start();
+
+    // E07-T3/T7: poller de veredictos resueltos → respuesta del semáforo, para todos los
+    // números del pool.
+    this.verdictPollTimer = setInterval(() => {
+      void this.pollVerdicts();
+    }, VERDICT_POLL_INTERVAL_MS);
+    this.logger.log(
+      `Pool activo con ${numberIds.length} número(s); health cada 60s; poller cada ${VERDICT_POLL_INTERVAL_MS}ms`,
+    );
+  }
+
+  async onModuleDestroy(): Promise<void> {
+    if (this.verdictPollTimer) clearInterval(this.verdictPollTimer);
+    this.healthMonitor?.stop();
+    await this.pool?.stopAll();
+  }
+
+  /**
+   * Números a levantar al arrancar (E07-T7). Con `WHATSAPP_WA_NUMBER_ID` fijado se limita a ese
+   * número (modo single, Grupo A). Si no, todos los poolables (pasaron warmeo, no baneados).
+   */
+  private async resolveNumbersToStart(): Promise<string[]> {
+    if (env.WHATSAPP_WA_NUMBER_ID) return [env.WHATSAPP_WA_NUMBER_ID];
+    return this.store.listPoolableNumberIds();
+  }
+
+  /** Construye una `WhatsAppInstance` cableada a los puertos Prisma/Storage para un número. */
+  private buildInstance(waNumberId: string): WhatsAppInstance {
+    return new WhatsAppInstance({
       waNumberId,
       sessionStore: this.store,
       businessResolver: this.store,
@@ -87,24 +147,9 @@ export class WhatsAppManager implements OnModuleInit, OnModuleDestroy {
         onQr: (qr) => this.logger.warn(`QR de vinculación para ${waNumberId} (escanéalo):\n${qr}`),
         onConnected: () => this.logger.log(`Instancia ${waNumberId} lista`),
         onLoggedOut: () =>
-          this.logger.error(`Instancia ${waNumberId} deslogueada: re-vincular (nuevo QR)`),
+          this.logger.error(`Instancia ${waNumberId} deslogueada/baneada: re-vincular (nuevo QR)`),
       },
     });
-
-    await this.instance.start();
-
-    // E07-T3: poller de veredictos resueltos → respuesta del semáforo. Enfoque MENOS
-    // invasivo: no toca el worker de verificación (E06) ni añade una cola de salida; sondea
-    // las `Transaction` ya resueltas cuyo comprobante vino por WhatsApp y aún no se respondió.
-    this.verdictPollTimer = setInterval(() => {
-      void this.pollVerdicts(waNumberId);
-    }, VERDICT_POLL_INTERVAL_MS);
-    this.logger.log(`Poller de veredictos activo (cada ${VERDICT_POLL_INTERVAL_MS}ms)`);
-  }
-
-  async onModuleDestroy(): Promise<void> {
-    if (this.verdictPollTimer) clearInterval(this.verdictPollTimer);
-    await this.instance?.stop();
   }
 
   /**
@@ -118,17 +163,18 @@ export class WhatsAppManager implements OnModuleInit, OnModuleDestroy {
     return { startHour, endHour, utcOffsetMinutes: env.WHATSAPP_BUSINESS_UTC_OFFSET_MINUTES };
   }
 
-  /** Un ciclo del poller (E07-T3): responde los veredictos resueltos pendientes. */
-  private async pollVerdicts(waNumberId: string): Promise<void> {
-    if (this.polling || !this.instance) return; // evita solapamiento de ciclos
+  /** Un ciclo del poller (E07-T3/T7): responde los veredictos resueltos de todo el pool. */
+  private async pollVerdicts(): Promise<void> {
+    if (this.polling || !this.pool) return; // evita solapamiento de ciclos
     this.polling = true;
     try {
-      const pending = await this.store.findPendingVerdictNotifications(
-        waNumberId,
+      const numberIds = this.pool.numberIds();
+      const pending = await this.store.findPendingVerdictNotificationsForNumbers(
+        numberIds,
         VERDICT_POLL_BATCH_SIZE,
       );
       for (const item of pending) {
-        await this.notifyOne(item.voucherId, item.verdict);
+        await this.notifyOne(item.waNumberId, item.voucherId, item.verdict);
       }
     } catch (error) {
       this.logger.error(`Poller de veredictos falló: ${errMsg(error)}`);
@@ -137,9 +183,13 @@ export class WhatsAppManager implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  private async notifyOne(voucherId: string, verdict: ResolvedVerdict): Promise<void> {
+  private async notifyOne(
+    waNumberId: string,
+    voucherId: string,
+    verdict: ResolvedVerdict,
+  ): Promise<void> {
     try {
-      const sent = await this.instance!.sendVerdict(voucherId, verdict);
+      const sent = await this.pool!.sendVerdict(waNumberId, voucherId, verdict);
       if (sent) {
         // Solo marcamos como notificado si el envío tuvo éxito: si falla, el próximo ciclo
         // reintenta (el 🟡 sigue vigente para el cliente mientras tanto).
