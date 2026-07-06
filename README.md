@@ -57,7 +57,18 @@ packages/
 
 ## Estado
 
-Planeado por épicas en [`.trellis/tasks/`](.trellis/tasks/). **Épica 1 (setup del monorepo)** completa: scaffolding compilable, TS estricto, lint/format y CI.
+Planeado por épicas en [`.trellis/tasks/`](.trellis/tasks/). **Las 12 épicas están completas:**
+
+| # | Épica | # | Épica |
+| - | ----- | - | ----- |
+| 1 | Setup del monorepo | 7 | Capa WhatsApp (Baileys) |
+| 2 | Base de datos multi-tenant (RLS) | 8 | Enrutador de QR estable |
+| 3 | Auth y onboarding | 9 | PWA de fallback |
+| 4 | Ingesta de correos bancarios | 10 | Dashboard cajero/dueño |
+| 5 | OCR y extracción | 11 | Observabilidad y alertas |
+| 6 | Motor de verificación (7 defensas) | 12 | Hardening y cumplimiento |
+
+Pendientes conocidos (no bloqueantes): activar el `custom_access_token_hook` en el dashboard de Supabase para habilitar la RLS directa desde el cliente (hoy el acceso del dashboard va mediado por la API, que ya aplica RLS server-side).
 
 ## CI
 
