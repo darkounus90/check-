@@ -8,6 +8,9 @@ packages:
 # - esbuild: usado por tsx para ejecutar scripts TS (seed, etc.)
 # - protobufjs: dependencia transitiva de @google-cloud/vision (E05-T1); su postinstall
 #   solo genera bindings JS de protobuf, no compila nativo.
+# - @whiskeysockets/baileys (E07-T1): su único build script es `prepare` (compila la
+#   librería DESDE la fuente). El paquete publicado ya trae `lib/` prebuilt, así que ese
+#   script es innecesario y requeriría toolchain de dev. Se deniega explícitamente (false).
 allowBuilds:
   sharp: true
   prisma: true
@@ -16,3 +19,4 @@ allowBuilds:
   esbuild: true
   protobufjs: true
   msgpackr-extract: true
+  "@whiskeysockets/baileys": false

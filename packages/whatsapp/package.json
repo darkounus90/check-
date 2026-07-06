@@ -18,9 +18,14 @@
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint src",
-    "test": "echo \"@check/whatsapp: sin tests aun\""
+    "test": "tsx --test test/auth-state.test.ts test/incoming.test.ts test/templates.test.ts"
   },
   "dependencies": {
-    "@check/shared": "workspace:*"
+    "@check/database": "workspace:*",
+    "@check/shared": "workspace:*",
+    "@whiskeysockets/baileys": "7.0.0-rc13"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.2"
   }
 }

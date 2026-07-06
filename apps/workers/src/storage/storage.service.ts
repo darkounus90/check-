@@ -15,12 +15,17 @@ export interface VoucherImageDownloader {
   downloadVoucherImage(storagePath: string): Promise<Uint8Array>;
 }
 
+/** Contrato mínimo de subida de comprobantes (E07-T2: ingesta WhatsApp → Storage). */
+export interface VoucherImageUploader {
+  uploadVoucher(storagePath: string, bytes: Uint8Array, contentType: string): Promise<void>;
+}
+
 /**
  * Cliente mínimo de Supabase Storage (REST), mismo estilo minimalista que
  * `SupabaseAdminService` de `apps/api` (fetch directo, sin el SDK `@supabase/supabase-js`).
  */
 @Injectable()
-export class StorageService implements VoucherImageDownloader {
+export class StorageService implements VoucherImageDownloader, VoucherImageUploader {
   private readonly base = `${env.SUPABASE_URL}/storage/v1/object`;
   private readonly headers = {
     apikey: env.SUPABASE_SERVICE_ROLE_KEY,
@@ -38,5 +43,23 @@ export class StorageService implements VoucherImageDownloader {
       );
     }
     return new Uint8Array(await res.arrayBuffer());
+  }
+
+  /**
+   * Sube los bytes de un comprobante al bucket privado `vouchers` (E07-T2). Misma
+   * convención que el uploader de la ingesta pública (`apps/api`): mismo bucket, y
+   * `storagePath` = ruta del objeto (`{businessId}/{uuid}.{ext}`) sin prefijo de bucket.
+   */
+  async uploadVoucher(storagePath: string, bytes: Uint8Array, contentType: string): Promise<void> {
+    const res = await fetch(`${this.base}/${VOUCHER_STORAGE_BUCKET}/${storagePath}`, {
+      method: "POST",
+      headers: { ...this.headers, "content-type": contentType },
+      body: bytes,
+    });
+    if (!res.ok) {
+      throw new InternalServerErrorException(
+        `No se pudo subir el comprobante a Storage (${res.status})`,
+      );
+    }
   }
 }

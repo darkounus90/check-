@@ -8,7 +8,7 @@
     "dev": "node --watch dist/main.js",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint src",
-    "test": "tsx --test test/env.test.ts test/ocr.service.test.ts test/verification.service.test.ts test/verification.context.test.ts test/verification.processor.test.ts"
+    "test": "tsx --test test/env.test.ts test/ocr.service.test.ts test/verification.service.test.ts test/verification.context.test.ts test/verification.processor.test.ts test/whatsapp.store.test.ts"
   },
   "dependencies": {
     "@check/database": "workspace:*",
@@ -16,6 +16,7 @@
     "@check/parsers": "workspace:*",
     "@check/shared": "workspace:*",
     "@check/verifier": "workspace:*",
+    "@check/whatsapp": "workspace:*",
     "@nestjs/common": "^11.0.0",
     "@nestjs/core": "^11.0.0",
     "@prisma/client": "^6.1.0",

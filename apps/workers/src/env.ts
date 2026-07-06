@@ -14,6 +14,15 @@ const envSchema = z.object({
   SUPABASE_URL: z.string().url(),
   /// Secret key de Supabase (Storage Admin API). Nunca se loguea.
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
+  /// Habilita la instancia WhatsApp (Baileys) en este proceso (Épica 7, Grupo A).
+  /// Por defecto apagada: sin un número configurado, los workers corren solo OCR/verificación.
+  WHATSAPP_ENABLED: z
+    .enum(["true", "false"])
+    .default("false")
+    .transform((v) => v === "true"),
+  /// Id del `WaNumber` (fila del schema) que esta instancia representa. Requerido si
+  /// `WHATSAPP_ENABLED=true`. Un número/instancia por proceso por ahora (multi-instancia es E07-T7).
+  WHATSAPP_WA_NUMBER_ID: z.string().min(1).optional(),
 });
 
 export type WorkersEnv = z.infer<typeof envSchema>;

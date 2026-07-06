@@ -184,6 +184,7 @@ model Voucher {
 
   business    Business     @relation(fields: [businessId], references: [id], onDelete: Cascade)
   transaction Transaction?
+  waContext   WaVoucherContext?
 
   @@index([businessId])
   @@index([businessId, approvalNumber])
@@ -294,8 +295,9 @@ model WaNumber {
 
   createdAt DateTime @default(now())
 
-  session     WaSession?
-  assignments NumberPoolAssignment[]
+  session         WaSession?
+  assignments     NumberPoolAssignment[]
+  voucherContexts WaVoucherContext[]
 
   @@map("wa_numbers")
 }
@@ -330,6 +332,33 @@ model NumberPoolAssignment {
   @@unique([waNumberId, businessId])
   @@index([businessId])
   @@map("number_pool_assignments")
+}
+
+/// Mapeo conversación WhatsApp ↔ comprobante (E07-T2/T3). Guarda de qué chat (JID
+/// remitente) llegó un `Voucher` y por qué número lo recibió, para poder responder el
+/// semáforo al chat de origen cuando la `Transaction` se resuelve. No existía un modelo
+/// para este vínculo en el schema de la Épica 2; se añade aquí como excepción documentada
+/// (el resto del pipeline solo conoce el `Voucher`, no su origen WhatsApp).
+model WaVoucherContext {
+  id String @id @default(cuid())
+
+  voucherId String @unique
+  /// JID del chat de WhatsApp del que llegó el comprobante (a quién responder).
+  remoteJid String
+  /// Número CHECK (WaNumber) que recibió el mensaje: identifica la instancia que debe responder.
+  waNumberId String
+
+  /// Momento en que YA se respondió el veredicto final (🟢/🚨) a este chat. `null` = pendiente.
+  /// Lo usa el poller de veredictos (E07-T3) para no responder dos veces el mismo comprobante.
+  notifiedAt DateTime?
+
+  createdAt DateTime @default(now())
+
+  voucher  Voucher  @relation(fields: [voucherId], references: [id], onDelete: Cascade)
+  waNumber WaNumber @relation(fields: [waNumberId], references: [id], onDelete: Cascade)
+
+  @@index([waNumberId])
+  @@map("wa_voucher_contexts")
 }
 
 // ─────────────────────────────────────────────────────────────
