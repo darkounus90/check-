@@ -2,8 +2,12 @@ import type {
   BusinessResolver,
   OcrEnqueuer,
   ResolvedVerdict,
+  TemplateKindKey,
+  TemplateRotationStore,
   VoucherContextReader,
   VoucherIngestStore,
+  WarmupStateSnapshot,
+  WarmupStore,
   WaSessionStore,
 } from "@check/whatsapp";
 import { Inject, Injectable } from "@nestjs/common";
@@ -39,7 +43,14 @@ export interface PendingVerdictNotification {
  */
 @Injectable()
 export class WhatsAppStore
-  implements WaSessionStore, BusinessResolver, VoucherIngestStore, OcrEnqueuer, VoucherContextReader
+  implements
+    WaSessionStore,
+    BusinessResolver,
+    VoucherIngestStore,
+    OcrEnqueuer,
+    VoucherContextReader,
+    TemplateRotationStore,
+    WarmupStore
 {
   constructor(
     @Inject(PrismaService) private readonly prisma: PrismaService,
@@ -153,6 +164,66 @@ export class WhatsAppStore
     await this.prisma.waVoucherContext.update({
       where: { voucherId },
       data: { notifiedAt: new Date() },
+    });
+  }
+
+  // ── E07-T5: rotación de plantillas (último índice por número/tipo) ──
+
+  async getLastTemplateIndex(waNumberId: string, kind: TemplateKindKey): Promise<number | null> {
+    const row = await this.prisma.waNumber.findUnique({
+      where: { id: waNumberId },
+      select: {
+        lastAckTemplateIndex: true,
+        lastVerifiedTemplateIndex: true,
+        lastSuspiciousTemplateIndex: true,
+      },
+    });
+    if (!row) return null;
+    if (kind === "ack") return row.lastAckTemplateIndex;
+    if (kind === "verified") return row.lastVerifiedTemplateIndex;
+    return row.lastSuspiciousTemplateIndex;
+  }
+
+  async setLastTemplateIndex(
+    waNumberId: string,
+    kind: TemplateKindKey,
+    index: number,
+  ): Promise<void> {
+    const data =
+      kind === "ack"
+        ? { lastAckTemplateIndex: index }
+        : kind === "verified"
+          ? { lastVerifiedTemplateIndex: index }
+          : { lastSuspiciousTemplateIndex: index };
+    await this.prisma.waNumber.update({ where: { id: waNumberId }, data });
+  }
+
+  // ── E07-T6: estado de warmeo (fecha de alta + ventana horaria de conteo) ──
+
+  async getWarmupState(waNumberId: string): Promise<WarmupStateSnapshot> {
+    const row = await this.prisma.waNumber.findUnique({
+      where: { id: waNumberId },
+      select: {
+        warmupStartedAt: true,
+        warmupHourWindowStart: true,
+        warmupSentInWindow: true,
+      },
+    });
+    return {
+      warmupStartedAtMs: row?.warmupStartedAt?.getTime() ?? null,
+      hourWindowStartMs: row?.warmupHourWindowStart?.getTime() ?? null,
+      sentInWindow: row?.warmupSentInWindow ?? 0,
+    };
+  }
+
+  async saveWarmupState(waNumberId: string, state: WarmupStateSnapshot): Promise<void> {
+    await this.prisma.waNumber.update({
+      where: { id: waNumberId },
+      data: {
+        warmupHourWindowStart:
+          state.hourWindowStartMs == null ? null : new Date(state.hourWindowStartMs),
+        warmupSentInWindow: state.sentInWindow,
+      },
     });
   }
 }

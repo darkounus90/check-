@@ -23,6 +23,12 @@ const envSchema = z.object({
   /// Id del `WaNumber` (fila del schema) que esta instancia representa. Requerido si
   /// `WHATSAPP_ENABLED=true`. Un número/instancia por proceso por ahora (multi-instancia es E07-T7).
   WHATSAPP_WA_NUMBER_ID: z.string().min(1).optional(),
+  /// Humanización anti-baneo (E07-T4): horario del negocio. Fuera de esta ventana NO se
+  /// responde (se pospone). Horas locales 0–24; offset TZ en minutos (Colombia = -300).
+  /// Si no se configuran, la instancia responde 24/7.
+  WHATSAPP_BUSINESS_START_HOUR: z.coerce.number().int().min(0).max(23).optional(),
+  WHATSAPP_BUSINESS_END_HOUR: z.coerce.number().int().min(1).max(24).optional(),
+  WHATSAPP_BUSINESS_UTC_OFFSET_MINUTES: z.coerce.number().int().default(-300),
 });
 
 export type WorkersEnv = z.infer<typeof envSchema>;

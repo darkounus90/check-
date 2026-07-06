@@ -18,7 +18,7 @@
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint src",
-    "test": "tsx --test test/auth-state.test.ts test/incoming.test.ts test/templates.test.ts"
+    "test": "tsx --test test/auth-state.test.ts test/incoming.test.ts test/templates.test.ts test/humanizer.test.ts test/warmup.test.ts test/instance-send.test.ts"
   },
   "dependencies": {
     "@check/database": "workspace:*",

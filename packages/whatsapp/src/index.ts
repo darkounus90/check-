@@ -19,6 +19,19 @@ export {
   useDbAuthState,
 } from "./db-auth-state.js";
 export {
+  type BusinessHours,
+  type Clock,
+  Humanizer,
+  type HumanizerDeps,
+  type HumanizerEffects,
+  type HumanizerTiming,
+  isWithinBusinessHours,
+  localHourOf,
+  type Random,
+  realSleep,
+  type Sleep,
+} from "./humanizer.js";
+export {
   ALLOWED_VOUCHER_MIME_TYPES,
   type DetectedVoucherMedia,
   detectVoucherMedia,
@@ -30,15 +43,34 @@ export {
   WhatsAppInstance,
   type WhatsAppInstanceDeps,
 } from "./instance.js";
-export { ACK_TEMPLATE, renderVerdictMessage } from "./templates.js";
+export {
+  type PickedTemplate,
+  pickTemplate,
+  type TemplateKind,
+  templateKindForVerdict,
+  TEMPLATES,
+} from "./templates.js";
 export type {
   BusinessResolver,
   OcrEnqueuer,
   ResolvedVerdict,
+  TemplateKindKey,
+  TemplateRotationStore,
   VoucherContextReader,
   VoucherIngestStore,
   VoucherStorageUploader,
+  WarmupStateSnapshot,
+  WarmupStore,
   WaSessionStore,
   WhatsAppInstanceCallbacks,
   WhatsAppNumberHealth,
 } from "./types.js";
+export {
+  canSend,
+  hourlyLimit,
+  isPoolEligible,
+  registerSend,
+  WARMUP_HOURLY_LIMITS,
+  WARMUP_WINDOW_MS,
+  type WarmupState,
+} from "./warmup.js";

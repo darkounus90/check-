@@ -75,6 +75,46 @@ export interface VoucherContextReader {
 }
 
 // ─────────────────────────────────────────────────────────────
+// E07-T5 — rotación de plantillas (estado del último índice por tipo/número)
+// ─────────────────────────────────────────────────────────────
+
+/** Tipo de respuesta cuya plantilla rota (espejo de `TemplateKind` en `templates.ts`). */
+export type TemplateKindKey = "ack" | "verified" | "suspicious";
+
+/**
+ * Persiste/lee el ÚLTIMO índice de plantilla usado por (número, tipo) para no repetir dos
+ * mensajes idénticos consecutivos del mismo tipo (E07-T5). La implementación real (Prisma)
+ * vive en apps/workers; en test se inyecta un fake en memoria.
+ */
+export interface TemplateRotationStore {
+  /** Último índice usado para (número, tipo), o `null` si nunca se envió ese tipo. */
+  getLastTemplateIndex(waNumberId: string, kind: TemplateKindKey): Promise<number | null>;
+  /** Guarda el índice recién usado para (número, tipo). */
+  setLastTemplateIndex(waNumberId: string, kind: TemplateKindKey, index: number): Promise<void>;
+}
+
+// ─────────────────────────────────────────────────────────────
+// E07-T6 — motor de warmeo (estado de volumen del número)
+// ─────────────────────────────────────────────────────────────
+
+/** Estado de warmeo persistido de un número (espejo de `WarmupState` en `warmup.ts`). */
+export interface WarmupStateSnapshot {
+  warmupStartedAtMs: number | null;
+  hourWindowStartMs: number | null;
+  sentInWindow: number;
+}
+
+/**
+ * Lee/persiste el estado de warmeo de un número (E07-T6): fecha de alta, ventana horaria de
+ * conteo y envíos en la ventana. Lo usa la instancia para respetar el límite horario antes
+ * de enviar. Implementación Prisma en apps/workers; fake en memoria en test.
+ */
+export interface WarmupStore {
+  getWarmupState(waNumberId: string): Promise<WarmupStateSnapshot>;
+  saveWarmupState(waNumberId: string, state: WarmupStateSnapshot): Promise<void>;
+}
+
+// ─────────────────────────────────────────────────────────────
 // Configuración/callbacks de la instancia
 // ─────────────────────────────────────────────────────────────
 

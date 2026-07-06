@@ -1,4 +1,9 @@
-import { type ResolvedVerdict, WhatsAppInstance } from "@check/whatsapp";
+import {
+  type BusinessHours,
+  realSleep,
+  type ResolvedVerdict,
+  WhatsAppInstance,
+} from "@check/whatsapp";
 import {
   Inject,
   Injectable,
@@ -59,6 +64,18 @@ export class WhatsAppManager implements OnModuleInit, OnModuleDestroy {
       ingestStore: this.store,
       ocrEnqueuer: this.store,
       contextReader: this.store,
+      // Grupo B: rotación de plantillas (E07-T5) y motor de warmeo (E07-T6) persistidos en
+      // `WaNumber` vía el mismo store Prisma.
+      templateRotation: this.store,
+      warmup: this.store,
+      // Humanización anti-baneo (E07-T4): reloj/aleatoriedad/sleep reales en producción;
+      // horario del negocio configurable por env (fuera de horario no se responde).
+      humanizer: {
+        clock: () => Date.now(),
+        random: () => Math.random(),
+        sleep: realSleep,
+        businessHours: this.resolveBusinessHours(),
+      },
       logger: {
         info: (msg) => this.logger.log(msg),
         warn: (msg) => this.logger.warn(msg),
@@ -88,6 +105,17 @@ export class WhatsAppManager implements OnModuleInit, OnModuleDestroy {
   async onModuleDestroy(): Promise<void> {
     if (this.verdictPollTimer) clearInterval(this.verdictPollTimer);
     await this.instance?.stop();
+  }
+
+  /**
+   * Horario del negocio para la humanización (E07-T4), leído de env. Si no se configuraron
+   * ambas horas (inicio/fin), devuelve `undefined` ⇒ la instancia responde 24/7.
+   */
+  private resolveBusinessHours(): BusinessHours | undefined {
+    const startHour = env.WHATSAPP_BUSINESS_START_HOUR;
+    const endHour = env.WHATSAPP_BUSINESS_END_HOUR;
+    if (startHour == null || endHour == null) return undefined;
+    return { startHour, endHour, utcOffsetMinutes: env.WHATSAPP_BUSINESS_UTC_OFFSET_MINUTES };
   }
 
   /** Un ciclo del poller (E07-T3): responde los veredictos resueltos pendientes. */

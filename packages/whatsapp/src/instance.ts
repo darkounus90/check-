@@ -21,18 +21,27 @@ interface BaileysLogger {
 }
 
 import { type DbAuthState, useDbAuthState } from "./db-auth-state.js";
+import {
+  Humanizer,
+  type HumanizerDeps,
+  type HumanizerEffects,
+  realSleep,
+} from "./humanizer.js";
 import { detectVoucherMedia, isProcessableIncoming, remoteJidOf } from "./incoming.js";
-import { ACK_TEMPLATE, renderVerdictMessage } from "./templates.js";
+import { pickTemplate, type TemplateKind, templateKindForVerdict } from "./templates.js";
 import type {
   BusinessResolver,
   OcrEnqueuer,
   ResolvedVerdict,
+  TemplateRotationStore,
   VoucherContextReader,
   VoucherIngestStore,
   VoucherStorageUploader,
+  WarmupStore,
   WaSessionStore,
   WhatsAppInstanceCallbacks,
 } from "./types.js";
+import { canSend, registerSend } from "./warmup.js";
 
 /** Logger mínimo (subconjunto de `ILogger` de Baileys). Se inyecta para no acoplar a pino. */
 export interface WaLogger {
@@ -53,6 +62,16 @@ export interface WhatsAppInstanceDeps {
   readonly contextReader: VoucherContextReader;
   readonly logger: WaLogger;
   readonly callbacks?: WhatsAppInstanceCallbacks;
+  /**
+   * Configuración de humanización anti-baneo (E07-T4): reloj/aleatoriedad/sleep inyectables
+   * y horario del negocio. Si se omite, se usan defaults reales (`Date.now`, `Math.random`,
+   * `setTimeout`) y horario 24/7. Se inyecta en test para fijar delays y presencia.
+   */
+  readonly humanizer?: HumanizerDeps;
+  /** Persistencia del último índice de plantilla por (número, tipo) para no repetir (E07-T5). */
+  readonly templateRotation?: TemplateRotationStore;
+  /** Persistencia y control del estado de warmeo del número (E07-T6): límite horario. */
+  readonly warmup?: WarmupStore;
 }
 
 /**
@@ -74,14 +93,32 @@ export class WhatsAppInstance {
   private socket: WASocket | undefined;
   private auth: DbAuthState | undefined;
   private stopped = false;
+  /** Humanizador anti-baneo (E07-T4). Con defaults reales si no se inyecta config. */
+  private readonly humanizer: Humanizer;
 
-  constructor(private readonly deps: WhatsAppInstanceDeps) {}
+  constructor(private readonly deps: WhatsAppInstanceDeps) {
+    this.humanizer = new Humanizer(
+      deps.humanizer ?? {
+        clock: () => Date.now(),
+        random: () => Math.random(),
+        sleep: realSleep,
+      },
+    );
+  }
 
   /** Arranca la instancia: carga el auth-state y abre el socket. */
   async start(): Promise<void> {
     this.stopped = false;
     this.auth = await useDbAuthState(this.deps.sessionStore, this.deps.waNumberId);
     await this.connect();
+  }
+
+  /**
+   * Seam de test (E07-T4/T5/T6): inyecta un socket fake para ejercitar el pipeline de envío
+   * (humanización, rotación, warmeo) sin abrir una conexión Baileys real. NO usar en prod.
+   */
+  setSocketForTest(socket: Pick<WASocket, "sendMessage" | "sendPresenceUpdate" | "readMessages">): void {
+    this.socket = socket as WASocket;
   }
 
   /** Cierra la instancia de forma ordenada (no borra la sesión persistida). */
@@ -172,6 +209,10 @@ export class WhatsAppInstance {
     const remoteJid = remoteJidOf(message);
     if (!remoteJid) return;
 
+    // E07-T4: marca leído el mensaje entrante con un pequeño delay humano (nunca outbound,
+    // solo un read-receipt). Se hace antes de procesar/acusar.
+    await this.markReadHumanized(remoteJid, message);
+
     const businessId = await this.deps.businessResolver.resolveBusinessId(this.deps.waNumberId);
     if (!businessId) {
       this.deps.logger.warn(
@@ -200,8 +241,9 @@ export class WhatsAppInstance {
     await this.deps.ocrEnqueuer.enqueueVoucherOcr(voucher.id);
     this.deps.logger.info(`Comprobante WhatsApp ${voucher.id} de ${remoteJid} encolado para OCR`);
 
-    // E07-T3: acuse inmediato 🟡 al chat de origen.
-    await this.sendMessage(remoteJid, ACK_TEMPLATE);
+    // E07-T3: acuse inmediato 🟡 al chat de origen (con rotación de plantilla E07-T5 y
+    // humanización E07-T4 aplicadas en `sendTemplated`).
+    await this.sendTemplated(remoteJid, "ack");
   }
 
   /**
@@ -214,18 +256,94 @@ export class WhatsAppInstance {
     if (!context) return false;
     // Defensa: esta instancia solo responde comprobantes que ella misma recibió.
     if (context.waNumberId !== this.deps.waNumberId) return false;
-    await this.sendMessage(context.remoteJid, renderVerdictMessage(verdict));
-    return true;
+    return this.sendTemplated(context.remoteJid, templateKindForVerdict(verdict));
   }
 
   /**
-   * ÚNICA función de envío de texto de la instancia (E07-T3). Todo outbound pasa por aquí
-   * para que Grupo B (humanización E07-T4: delays, "escribiendo…", presencia; rotación de
-   * plantillas E07-T5) se enganche en un solo punto sin tocar los llamadores.
+   * Envía una respuesta de tipo `kind` (ack/verified/suspicious) rotando plantilla (E07-T5)
+   * y con humanización (E07-T4). Selecciona una variante distinta de la última usada para
+   * ese (número, tipo), y persiste el índice elegido. Devuelve `false` si el envío se pospuso
+   * por horario del negocio (E07-T4) o por límite de warmeo (E07-T6). Si no hay store de
+   * rotación configurado, usa la primera variante (comportamiento base).
    */
-  async sendMessage(to: string, body: string): Promise<void> {
+  private async sendTemplated(to: string, kind: TemplateKind): Promise<boolean> {
+    const lastIndex = this.deps.templateRotation
+      ? await this.deps.templateRotation.getLastTemplateIndex(this.deps.waNumberId, kind)
+      : null;
+    const picked = pickTemplate(kind, lastIndex);
+    const sent = await this.sendMessage(to, picked.text);
+    if (sent && this.deps.templateRotation) {
+      // Solo avanzamos el índice si de verdad se envió (no si se pospuso por horario/warmeo),
+      // para no "gastar" una variante en un mensaje que no salió.
+      await this.deps.templateRotation.setLastTemplateIndex(this.deps.waNumberId, kind, picked.index);
+    }
+    return sent;
+  }
+
+  /**
+   * ÚNICA función de envío de texto de la instancia (E07-T3). Todo outbound pasa por aquí; es
+   * el gancho central donde se aplica la humanización (E07-T4: presencia "escribiendo…",
+   * delay aleatorio 1–4s, respeto del horario) y el límite de warmeo (E07-T6). Devuelve
+   * `false` si el mensaje NO se envió por estar fuera de horario o por tope de warmeo; nunca
+   * origina outbound espontáneo (solo entrega lo que se le pide).
+   */
+  async sendMessage(to: string, body: string): Promise<boolean> {
     if (!this.socket) throw new Error(`Instancia ${this.deps.waNumberId} no conectada`);
-    await this.socket.sendMessage(to, { text: body });
+
+    // E07-T6: respeta el límite horario del warmeo del número. Si ya llegó a su tope, no
+    // envía (el llamador/poller reintentará más tarde, cuando la ventana horaria avance).
+    if (this.deps.warmup) {
+      const now = this.humanizer.clockNow();
+      const state = await this.deps.warmup.getWarmupState(this.deps.waNumberId);
+      if (!canSend(state, now)) {
+        this.deps.logger.warn(
+          `Número ${this.deps.waNumberId} alcanzó su límite de warmeo esta hora: envío pospuesto`,
+        );
+        return false;
+      }
+    }
+
+    // E07-T4: presencia "escribiendo…" + delay 1–4s + entrega, respetando horario del negocio.
+    const delivered = await this.humanizer.send(to, body, this.humanizerEffects());
+    if (!delivered) {
+      this.deps.logger.warn(
+        `Número ${this.deps.waNumberId}: respuesta a ${to} pospuesta (fuera de horario del negocio)`,
+      );
+      return false;
+    }
+
+    // E07-T6: registra el envío en la ventana horaria (transición de estado persistida).
+    if (this.deps.warmup) {
+      const now = this.humanizer.clockNow();
+      const state = await this.deps.warmup.getWarmupState(this.deps.waNumberId);
+      await this.deps.warmup.saveWarmupState(this.deps.waNumberId, registerSend(state, now));
+    }
+    return true;
+  }
+
+  /** E07-T4: marca leído un mensaje entrante con delay humano (no-op sin socket presente). */
+  private async markReadHumanized(to: string, message: WAMessage): Promise<void> {
+    if (!this.socket) return;
+    await this.humanizer.markReadHumanized(to, this.humanizerEffects(message.key));
+  }
+
+  /**
+   * Efectos de la humanización (presencia/leído/entrega) sobre el socket Baileys (E07-T4).
+   * `messageKey` (opcional) es la key del mensaje entrante a marcar como leído; en el envío
+   * de salida no aplica el read-receipt.
+   */
+  private humanizerEffects(messageKey?: WAMessage["key"]): HumanizerEffects {
+    return {
+      setPresence: async (to, presence) => {
+        await this.socket?.sendPresenceUpdate(presence, to);
+      },
+      markRead: async () => {
+        if (messageKey) await this.socket?.readMessages([messageKey]);
+      },
+      deliver: async (to, body) => {
+        await this.socket?.sendMessage(to, { text: body });
+      },
+    };
   }
 }
 

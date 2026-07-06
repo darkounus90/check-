@@ -293,6 +293,21 @@ model WaNumber {
   health          NumberHealth @default(WARMING)
   warmupStartedAt DateTime?
 
+  /// Motor de warmeo (E07-T6): conteo de envíos por ventana horaria para respetar el límite
+  /// del escalón (día1: 20/h, sem2: 60/h, luego 200/h). `warmupHourWindowStart` es el inicio
+  /// de la ventana horaria vigente; `warmupSentInWindow` los envíos hechos en ella. Se
+  /// reinician al cruzar la hora. Persistidos aquí porque un número/instancia vive en un
+  /// proceso worker que puede reiniciarse; el contador no puede vivir solo en memoria.
+  warmupHourWindowStart DateTime?
+  warmupSentInWindow    Int       @default(0)
+
+  /// Rotación de plantillas (E07-T5): último índice usado por tipo de respuesta para no
+  /// repetir dos mensajes idénticos consecutivos del mismo tipo. `null` = ese tipo nunca se
+  /// envió aún. Uno por tipo (ack 🟡 / verificado 🟢 / sospechoso 🚨).
+  lastAckTemplateIndex        Int?
+  lastVerifiedTemplateIndex   Int?
+  lastSuspiciousTemplateIndex Int?
+
   createdAt DateTime @default(now())
 
   session         WaSession?
