@@ -17,6 +17,7 @@ import {
   PublicVouchersService,
   type UploadedVoucherFile,
 } from "./public-vouchers.service";
+import { QrRouterService } from "./qr-router.service";
 
 /**
  * Endpoints públicos de la PWA de fallback (Épica 9, E09-T2/T4). SIN JWT a propósito:
@@ -38,7 +39,25 @@ export class PublicController {
   // que no emite `design:paramtypes`).
   constructor(
     @Inject(PublicVouchersService) private readonly vouchers: PublicVouchersService,
+    @Inject(QrRouterService) private readonly qrRouter: QrRouterService,
   ) {}
+
+  /**
+   * E08-T1: enrutador de QR. Resuelve `/n/{opaqueId}` al número WhatsApp sano del negocio
+   * (failover transparente a secundario, E08-T3) o indica caer a la PWA cuando todo el pool
+   * está caído (E08-T4). Público sin JWT; el negocio se resuelve por `opaqueId` (no enumerable)
+   * y la respuesta nunca filtra el businessId. La web lo consume server-side para redirigir a
+   * `wa.me` o renderizar la PWA. Sin rate limit (lectura barata en cada escaneo).
+   */
+  @Get("n/:opaqueId/route")
+  @SkipThrottle({
+    [PUBLIC_RATE_LIMITS.ingestPerIp.name]: true,
+    [PUBLIC_RATE_LIMITS.ingestPerBusiness.name]: true,
+    [PUBLIC_RATE_LIMITS.pollPerIp.name]: true,
+  })
+  resolveRoute(@Param("opaqueId") opaqueId: string) {
+    return this.qrRouter.resolveRoute(opaqueId);
+  }
 
   /**
    * E09-T2: identifica el negocio detrás de `/n/{opaqueId}`. 200 `{name}` | 404.

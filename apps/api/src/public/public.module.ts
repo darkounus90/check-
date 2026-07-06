@@ -10,6 +10,7 @@ import {
 } from "./public.constants";
 import { PublicController } from "./public.controller";
 import { PublicVouchersService } from "./public-vouchers.service";
+import { QrRouterService } from "./qr-router.service";
 import { VoucherStorageService } from "./voucher-storage.service";
 
 /**
@@ -58,6 +59,7 @@ import { VoucherStorageService } from "./voucher-storage.service";
   controllers: [PublicController],
   providers: [
     PublicVouchersService,
+    QrRouterService,
     { provide: VOUCHER_STORAGE_UPLOADER, useClass: VoucherStorageService },
     { provide: OCR_ENQUEUER, useClass: OcrQueueService },
   ],

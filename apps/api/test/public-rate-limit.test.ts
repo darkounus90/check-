@@ -18,6 +18,7 @@ import {
 } from "../src/public/public.constants";
 import { PublicController } from "../src/public/public.controller";
 import { PublicVouchersService } from "../src/public/public-vouchers.service";
+import { QrRouterService } from "../src/public/qr-router.service";
 
 /**
  * Tests de rate limiting anti-abuso de los endpoints públicos (E09-T7). Levanta
@@ -77,6 +78,7 @@ const fakeQueue = { async enqueueVoucherOcr() {} };
   controllers: [PublicController],
   providers: [
     PublicVouchersService,
+    QrRouterService,
     { provide: PrismaService, useValue: fakePrisma },
     { provide: VOUCHER_STORAGE_UPLOADER, useValue: fakeStorage },
     { provide: OCR_ENQUEUER, useValue: fakeQueue },

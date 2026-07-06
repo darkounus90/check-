@@ -7,6 +7,8 @@ import { IngestionModule } from "./ingestion/ingestion.module";
 import { MailboxController } from "./mailbox/mailbox.controller";
 import { MailboxService } from "./mailbox/mailbox.service";
 import { MeController } from "./me/me.controller";
+import { QrController } from "./me/qr.controller";
+import { QrService } from "./me/qr.service";
 import { OnboardingController } from "./onboarding/onboarding.controller";
 import { OnboardingService } from "./onboarding/onboarding.service";
 import { PublicModule } from "./public/public.module";
@@ -18,10 +20,11 @@ import { TenantModule } from "./tenant/tenant.module";
   controllers: [
     HealthController,
     MeController,
+    QrController,
     OnboardingController,
     AccountsController,
     MailboxController,
   ],
-  providers: [OnboardingService, MailboxService],
+  providers: [OnboardingService, MailboxService, QrService],
 })
 export class AppModule {}

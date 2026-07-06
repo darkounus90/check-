@@ -20,6 +20,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
   { href: "/dashboard/historico", label: "Histórico", roles: ["OWNER"] },
   { href: "/dashboard/alertas", label: "Alertas", roles: ["OWNER"] },
   { href: "/dashboard/cuentas", label: "Cuentas", roles: ["OWNER"] },
+  { href: "/dashboard/qr", label: "Código QR", roles: ["OWNER"] },
 ];
 
 /** Ítems visibles para el rol dado. */

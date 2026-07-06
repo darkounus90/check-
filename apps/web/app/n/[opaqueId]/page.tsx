@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 
 import { getPublicBusiness, type PublicBusiness } from "@/lib/public-api";
+import { getQrRoute, type QrRoute } from "@/lib/qr-route";
 
 import { VoucherFlow } from "./voucher-flow";
 
@@ -22,14 +24,45 @@ export function generateMetadata(): Metadata {
   };
 }
 
-// Ruta pública sin login (Épica 9). El negocio se resuelve server-side vía
-// el API público (GET /public/n/:opaqueId); al cliente solo se le pasa el
-// nombre del negocio y el opaqueId que ya está en su URL. La captura/subida
-// y el resultado en vivo viven en el client component VoucherFlow
-// (E09-T3/E09-T5).
+// ENRUTADOR de QR (Épica 8) + fallback a PWA (Épica 9). La misma URL
+// `/n/{opaqueId}` es el destino del QR físico: server-side consultamos el
+// enrutador público (GET /public/n/:opaqueId/route). Si hay un número WhatsApp
+// sano del negocio (primario o failover a secundario), redirigimos a `wa.me`
+// (E08-T1/T3). Si todo el pool del negocio está caído (`action=pwa`, E08-T4),
+// caemos EXACTAMENTE a la PWA de subida de la Épica 9 que ya existía: se resuelve
+// el negocio por su nombre y se renderiza `VoucherFlow` sin cambios.
 export default async function BusinessReceiptPage({ params }: PageProps) {
   const { opaqueId } = await params;
 
+  // 1) Enrutado: número sano → WhatsApp. `redirect()` lanza internamente, así que
+  //    debe ir FUERA del try/catch (no queremos tratar el redirect como un fallo).
+  let route: QrRoute | null = null;
+  let routeFailed = false;
+  try {
+    route = await getQrRoute(opaqueId);
+  } catch {
+    // Error de red o del API resolviendo el enrutado: degradamos a la PWA (que
+    // tiene su propio manejo de error). Sin loguear el opaqueId (D3).
+    routeFailed = true;
+  }
+
+  if (route === null && !routeFailed) {
+    // 404 explícito: enlace inválido, mismo mensaje que la PWA para no filtrar.
+    return (
+      <main className="mx-auto flex min-h-screen max-w-2xl flex-col items-center justify-center gap-4 p-8 text-center">
+        <h1 className="text-2xl font-semibold tracking-tight">Este enlace no es válido</h1>
+        <p className="text-slate-600">
+          Pide al negocio que te comparta de nuevo su enlace de verificación.
+        </p>
+      </main>
+    );
+  }
+
+  if (route?.action === "whatsapp") {
+    redirect(route.waMeUrl);
+  }
+
+  // 2) Fallback a la PWA (action=pwa o fallo de red): render intacto de la Épica 9.
   let business: PublicBusiness | null = null;
   let loadFailed = false;
 

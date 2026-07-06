@@ -10,16 +10,16 @@
 
 ### Grupo A — resolución base (secuencial)
 
-- **E08-T1 [→]** Endpoint `GET /n/{opaqueId}` que resuelve al número activo y redirige a `wa.me`/deep-link. **Aceptación:** un escaneo abre WhatsApp con el número asignado sano; el `opaqueId` no es enumerable.
-- **E08-T2 [→]** Selección de número sano usando health checks del pool (Épica 7). **Aceptación:** nunca resuelve a un número marcado caído/baneado.
+- **E08-T1 [x]** Endpoint `GET /public/n/:opaqueId/route` que resuelve al número activo y la web redirige a `wa.me`. **Aceptación:** un escaneo abre WhatsApp con el número asignado sano; el `opaqueId` no es enumerable. ✅
+- **E08-T2 [x]** Selección de número sano usando health checks del pool (Épica 7). **Aceptación:** nunca resuelve a un número marcado caído/baneado. ✅
 
 ### Grupo B — resiliencia (paralelizable tras Grupo A)
 
-- **E08-T3 [∥]** Failover automático a número secundario cuando el primario está caído. **Aceptación:** con el primario caído, la siguiente resolución usa el secundario transparente.
-- **E08-T4 [∥]** Fallback a PWA (`check.co/n/{negocio}` → PWA) cuando todo el pool del negocio está caído. **Aceptación:** sin números sanos, el cliente aterriza en la PWA de la Épica 9.
-- **E08-T5 [∥]** Registro/analítica de cada resolución (número elegido, motivo, fallback usado). **Aceptación:** cada escaneo deja traza consultable para operación.
+- **E08-T3 [x]** Failover automático a número secundario cuando el primario está caído. **Aceptación:** con el primario caído, la siguiente resolución usa el secundario transparente. ✅
+- **E08-T4 [x]** Fallback a PWA (`check.co/n/{negocio}` → PWA) cuando todo el pool del negocio está caído. **Aceptación:** sin números sanos, el cliente aterriza en la PWA de la Épica 9. ✅
+- **E08-T5 [x]** Registro/analítica de cada resolución (número elegido, motivo, fallback usado). Tabla `QrResolutionLog`. **Aceptación:** cada escaneo deja traza consultable para operación. ✅
 
 ### Grupo C — generación de QR y cierre (secuencial, tras Grupo B)
 
-- **E08-T6 [→]** Generación del QR/URL corta por negocio para imprimir. **Aceptación:** cada negocio obtiene su QR estable descargable que apunta a su ruta.
-- **E08-T7 [→]** Test de continuidad: primario→secundario→PWA en cadena. **Aceptación:** simulando caídas escalonadas, el cliente siempre llega a un canal funcional (cero downtime percibido).
+- **E08-T6 [x]** Generación del QR/URL por negocio para imprimir (`GET /me/qr`, PNG+SVG, `PUBLIC_APP_URL`). **Aceptación:** cada negocio obtiene su QR estable descargable que apunta a su ruta. ✅
+- **E08-T7 [x]** Test de continuidad: primario→secundario→PWA en cadena. **Aceptación:** simulando caídas escalonadas, el cliente siempre llega a un canal funcional (cero downtime percibido). ✅

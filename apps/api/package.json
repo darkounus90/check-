@@ -8,7 +8,7 @@
     "dev": "node --watch dist/main.js",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint src",
-    "test": "tsx --test test/public-vouchers.service.test.ts test/public-rate-limit.test.ts"
+    "test": "tsx --test test/public-vouchers.service.test.ts test/public-rate-limit.test.ts test/qr-router.test.ts test/qr-router.service.test.ts test/qr.service.test.ts"
   },
   "dependencies": {
     "@check/parsers": "workspace:*",
@@ -20,11 +20,13 @@
     "bullmq": "^5.34.0",
     "ioredis": "5.10.1",
     "jose": "^5.9.6",
+    "qrcode": "^1.5.4",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
     "zod": "^3.24.1"
   },
   "devDependencies": {
+    "@types/qrcode": "^1.5.6",
     "tsx": "^4.19.2"
   }
 }

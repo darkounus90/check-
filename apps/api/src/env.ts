@@ -20,6 +20,9 @@ const envSchema = z.object({
   /// Redis para encolar OCR de comprobantes públicos (BullMQ, E09-T4).
   /// Misma instancia que consumen los workers (cola `ocr-processing`).
   REDIS_URL: z.string().url().default("redis://localhost:6379"),
+  /// Dominio público donde vive la PWA/enrutador de QR (Épica 8). El QR impreso de cada
+  /// negocio apunta a `${PUBLIC_APP_URL}/n/{opaqueId}`. Configurable por despliegue (D1).
+  PUBLIC_APP_URL: z.string().url().default("http://localhost:3000"),
 });
 
 export type ApiEnv = z.infer<typeof envSchema>;

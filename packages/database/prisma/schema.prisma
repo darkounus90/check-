@@ -67,6 +67,13 @@ enum NumberHealth {
   BANNED
 }
 
+/// Motivo por el que el enrutador de QR (Épica 8, E08-T5) resolvió un escaneo.
+enum QrResolutionReason {
+  PRIMARY // número de mayor preferencia, sano (connected)
+  FAILOVER // el primario estaba caído; se usó un secundario sano (degraded o siguiente)
+  FALLBACK_PWA // ningún número sano en el pool del negocio; se cae a la PWA de subida
+}
+
 /// Estado del pipeline de OCR de un Voucher (E05-T3). No confundir con VerdictStatus
 /// (veredicto antifraude de la Transaction, Épica 6): esto es sobre la calidad/éxito del OCR.
 enum OcrStatus {
@@ -102,6 +109,7 @@ model Business {
   bankEmails        BankEmail[]
   poolAssignments   NumberPoolAssignment[]
   moneyOpLogs       MoneyOpLog[]
+  qrResolutionLogs  QrResolutionLog[]
 
   @@map("businesses")
 }
@@ -310,9 +318,10 @@ model WaNumber {
 
   createdAt DateTime @default(now())
 
-  session         WaSession?
-  assignments     NumberPoolAssignment[]
-  voucherContexts WaVoucherContext[]
+  session          WaSession?
+  assignments      NumberPoolAssignment[]
+  voucherContexts  WaVoucherContext[]
+  qrResolutionLogs QrResolutionLog[]
 
   @@map("wa_numbers")
 }
@@ -347,6 +356,31 @@ model NumberPoolAssignment {
   @@unique([waNumberId, businessId])
   @@index([businessId])
   @@map("number_pool_assignments")
+}
+
+/// Traza de cada resolución del enrutador de QR (Épica 8, E08-T5). Cada escaneo de
+/// `/n/{opaqueId}` deja aquí una fila consultable por operación: a qué número resolvió
+/// (o si cayó a la PWA) y por qué motivo. Analítica de continuidad primario→secundario→PWA.
+///
+/// D3: NO se persiste el `opaqueId` (identificador no enumerable de la URL); solo el
+/// `businessId` interno ya resuelto, que nunca sale al cliente. Un `waNumberId` nulo con
+/// `reason=FALLBACK_PWA` significa que todo el pool del negocio estaba caído.
+model QrResolutionLog {
+  id String @id @default(cuid())
+
+  businessId String
+  /// Número CHECK elegido, o null cuando se cayó a la PWA (todo el pool caído).
+  waNumberId String?
+  /// Motivo de la resolución: primario sano, failover a secundario, o fallback a PWA.
+  reason     QrResolutionReason
+
+  createdAt DateTime @default(now())
+
+  business Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  waNumber WaNumber? @relation(fields: [waNumberId], references: [id], onDelete: SetNull)
+
+  @@index([businessId, createdAt])
+  @@map("qr_resolution_logs")
 }
 
 /// Mapeo conversación WhatsApp ↔ comprobante (E07-T2/T3). Guarda de qué chat (JID
