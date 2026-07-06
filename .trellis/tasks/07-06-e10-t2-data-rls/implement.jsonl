@@ -1,0 +1,4 @@
+{"file": ".trellis/spec/frontend/index.md", "reason": "Índice de guías de frontend del proyecto."}
+{"file": "packages/database/prisma/migrations/1_rls_policies/migration.sql", "reason": "Policies RLS reales: dependen del claim business_id del JWT; base de la decisión vía-API."}
+{"file": "apps/api/src/tenant/tenant.service.ts", "reason": "Cómo la API fija el claim business_id server-side para satisfacer la RLS."}
+{"file": "packages/database/prisma/schema.prisma", "reason": "Enum VerdictStatus y @@map de la tabla transactions (nombres reales para Realtime)."}

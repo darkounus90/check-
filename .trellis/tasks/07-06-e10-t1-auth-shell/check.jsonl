@@ -1,0 +1,2 @@
+{"file": ".trellis/spec/frontend/index.md", "reason": "Guías de calidad de frontend para revisar el shell autenticado."}
+{"file": "apps/api/src/me/me.controller.ts", "reason": "Verificar que la resolución de rol/negocio coincide con el contrato de GET /me."}

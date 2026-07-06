@@ -1,0 +1,4 @@
+{"file": ".trellis/spec/frontend/index.md", "reason": "Índice de guías de frontend del proyecto."}
+{"file": "apps/api/src/me/me.controller.ts", "reason": "Contrato de GET /me; confirma que businessId/role se resuelven desde la BD, no del JWT (sin auth hook)."}
+{"file": "apps/api/src/auth/supabase-jwt.guard.ts", "reason": "Cómo la API verifica el JWT de Supabase y qué claims espera."}
+{"file": "packages/database/prisma/schema.prisma", "reason": "Enum Role (OWNER/CASHIER) y modelo Membership reales."}

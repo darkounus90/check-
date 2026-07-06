@@ -1,0 +1,2 @@
+{"file": ".trellis/spec/frontend/index.md", "reason": "Guías de calidad de frontend para revisar la capa de datos y el hook."}
+{"file": "packages/database/prisma/migrations/1_rls_policies/migration.sql", "reason": "Verificar que la decisión vía-API es coherente con las policies RLS reales."}
