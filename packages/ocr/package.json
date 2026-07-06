@@ -18,7 +18,7 @@
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint src",
-    "test": "tsx --test test/extractors.test.ts test/google-vision.test.ts"
+    "test": "tsx --test test/extractors.test.ts test/google-vision.test.ts test/preprocess.test.ts"
   },
   "dependencies": {
     "@check/shared": "workspace:*",

@@ -32,3 +32,27 @@ export const ALLOWED_VOUCHER_MIME_TYPES: Readonly<Record<string, string>> = {
 
 /** Tamaño máximo del comprobante subido: 10 MB. */
 export const MAX_VOUCHER_FILE_BYTES = 10 * 1024 * 1024;
+
+/**
+ * Rate limiting anti-abuso de los endpoints públicos (E09-T7). Ventana de 1 min.
+ * Calibrado para NO estorbar el uso legítimo: un cliente sube 1-3 comprobantes y
+ * el polling corre cada ~2.5 s durante ≤2 min (≈48 requests/2 min por voucher).
+ *
+ * Se separan dos dimensiones para la ingesta: por IP (frena un flood desde una
+ * sola máquina) y por negocio (`opaqueId`, frena un flood distribuido contra un
+ * mismo enlace). El polling se limita solo por IP, generoso, porque su volumen
+ * legítimo es alto y predecible.
+ *
+ * Los nombres son los `name` de los throttlers registrados en `ThrottlerModule`
+ * (ver `public.module.ts`) y referenciados por `@Throttle` en el controlador.
+ */
+export const PUBLIC_THROTTLE_TTL_MS = 60_000;
+
+export const PUBLIC_RATE_LIMITS = {
+  /** Ingesta por IP: 10/min. */
+  ingestPerIp: { name: "public-ingest-ip", limit: 10 },
+  /** Ingesta por negocio (opaqueId): 30/min. */
+  ingestPerBusiness: { name: "public-ingest-business", limit: 30 },
+  /** Polling del estado por IP: 60/min. */
+  pollPerIp: { name: "public-poll-ip", limit: 60 },
+} as const;

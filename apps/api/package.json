@@ -8,14 +8,15 @@
     "dev": "node --watch dist/main.js",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint src",
-    "test": "tsx --test test/public-vouchers.service.test.ts"
+    "test": "tsx --test test/public-vouchers.service.test.ts test/public-rate-limit.test.ts"
   },
   "dependencies": {
+    "@check/parsers": "workspace:*",
     "@nestjs/common": "^11.0.0",
     "@nestjs/core": "^11.0.0",
     "@nestjs/platform-express": "^11.0.0",
+    "@nestjs/throttler": "^6.5.0",
     "@prisma/client": "^6.1.0",
-    "@check/parsers": "workspace:*",
     "bullmq": "^5.34.0",
     "ioredis": "5.10.1",
     "jose": "^5.9.6",

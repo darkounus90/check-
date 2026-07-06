@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   ACCEPTED_VOUCHER_MIME_TYPES,
+  isImageProblemStatus,
   PublicApiError,
   uploadVoucher,
   validateVoucherFile,
@@ -52,7 +53,7 @@ export function VoucherFlow({ opaqueId, businessName }: VoucherFlowProps) {
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [voucherId, setVoucherId] = useState<string | null>(null);
 
-  const { verdict, timedOut, restart } = useVoucherVerdict(voucherId);
+  const { verdict, ocrStatus, timedOut, restart } = useVoucherVerdict(voucherId);
 
   // Preview solo para imágenes; los PDF muestran una tarjeta con el nombre.
   // El object URL se revoca al cambiar de archivo o desmontar.
@@ -124,11 +125,44 @@ export function VoucherFlow({ opaqueId, businessName }: VoucherFlowProps) {
     setProgress(0);
   }
 
+  // Reintento tras una foto ilegible (E09-T6): vuelve a la pantalla de captura
+  // SIN recargar. Limpia el voucherId para que el hook de polling se detenga y
+  // se reinicie con la próxima subida.
+  function handleRetakePhoto() {
+    setVoucherId(null);
+    setSelectedFile(null);
+    setValidationError(null);
+    setUploadError(null);
+    setPhase("idle");
+    setProgress(0);
+  }
+
   // ── Vista de resultado en vivo (E09-T5) ─────────────────────────────
   if (phase === "done" && voucherId) {
+    // Foto ilegible / no reconocida / PDF no soportado (E09-T6): NO es un 🚨
+    // (el pago no se marcó sospechoso, solo no se pudo leer). Pedir mejor foto
+    // con reintento sin recargar. Tiene prioridad sobre el estado 🟡 pendiente.
+    const needsBetterPhoto = ocrStatus !== null && isImageProblemStatus(ocrStatus);
+
     return (
       <section aria-live="polite" className="w-full">
-        {verdict === "VERIFIED" ? (
+        {needsBetterPhoto ? (
+          <div className="rounded-2xl border border-amber-200 bg-amber-50 p-8">
+            <p className="text-5xl" aria-hidden="true">
+              📷
+            </p>
+            <h2 className="mt-4 text-xl font-semibold text-amber-800">
+              La foto no se ve bien
+            </h2>
+            <p className="mt-2 text-sm text-amber-700">
+              No pudimos leer el comprobante. Toma otra foto más clara, con buena luz y que se vea
+              completo. Por ahora aceptamos fotos; si subiste un PDF, tómale una foto a la pantalla.
+            </p>
+            <Button size="lg" className="mt-6 w-full" onClick={handleRetakePhoto}>
+              Tomar otra foto
+            </Button>
+          </div>
+        ) : verdict === "VERIFIED" ? (
           <div className="rounded-2xl border border-green-200 bg-green-50 p-8">
             <p className="text-5xl" aria-hidden="true">
               🟢

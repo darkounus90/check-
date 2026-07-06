@@ -4,7 +4,7 @@ import { voucherExtractorRegistry } from "./detect.js";
 import type { ExtractedVoucher } from "./types.js";
 
 export { detectIssuerBank, voucherExtractorRegistry } from "./detect.js";
-export { normalizeImage } from "./preprocess.js";
+export { isUnsupportedByOcrPipeline, normalizeImage } from "./preprocess.js";
 export { GoogleVisionProvider, TextOcrProvider } from "./providers/google-vision.js";
 export { assessOcrQuality } from "./quality.js";
 export type { ExtractedVoucher, OcrProvider, OcrQuality, VoucherExtractor } from "./types.js";

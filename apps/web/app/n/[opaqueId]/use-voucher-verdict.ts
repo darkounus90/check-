@@ -2,7 +2,12 @@
 
 import { useCallback, useEffect, useState } from "react";
 
-import { getVoucherStatus, type VoucherVerdict } from "@/lib/public-api";
+import {
+  getVoucherStatus,
+  isImageProblemStatus,
+  type VoucherOcrStatus,
+  type VoucherVerdict,
+} from "@/lib/public-api";
 
 // Polling del veredicto (E09-T5): consulta cada ~2.5s con backoff suave
 // (x1.25 por ciclo, tope 10s) hasta resolver o agotar 2 minutos en total.
@@ -14,6 +19,11 @@ const MAX_TOTAL_MS = 120_000;
 export type VoucherVerdictState = {
   /** Último veredicto conocido; `null` hasta la primera respuesta. */
   verdict: VoucherVerdict | null;
+  /**
+   * Último `ocrStatus` conocido; `null` hasta la primera respuesta. La vista lo
+   * usa para pedir mejor foto cuando el OCR falla (LOW_QUALITY/FAILED, E09-T6).
+   */
+  ocrStatus: VoucherOcrStatus | null;
   /** `true` si se agotó la ventana de polling sin veredicto final. */
   timedOut: boolean;
   /** Reinicia la ventana de polling (botón "Seguir verificando"). */
@@ -29,6 +39,7 @@ export type VoucherVerdictState = {
  */
 export function useVoucherVerdict(voucherId: string | null): VoucherVerdictState {
   const [verdict, setVerdict] = useState<VoucherVerdict | null>(null);
+  const [ocrStatus, setOcrStatus] = useState<VoucherOcrStatus | null>(null);
   const [timedOut, setTimedOut] = useState(false);
   const [pollingRun, setPollingRun] = useState(0);
 
@@ -55,6 +66,13 @@ export function useVoucherVerdict(voucherId: string | null): VoucherVerdictState
       try {
         const status = await getVoucherStatus(voucherId);
         if (cancelled) {
+          return;
+        }
+        setOcrStatus(status.ocrStatus);
+        // Falla de imagen (foto ilegible / no reconocida / PDF): detener el
+        // polling y dejar que la vista pida una mejor foto (E09-T6). No es un
+        // 🚨: el pago no se marcó sospechoso, solo no se pudo leer.
+        if (isImageProblemStatus(status.ocrStatus)) {
           return;
         }
         if (status.verdict === "VERIFIED" || status.verdict === "SUSPICIOUS") {
@@ -95,5 +113,5 @@ export function useVoucherVerdict(voucherId: string | null): VoucherVerdictState
     };
   }, [voucherId, pollingRun]);
 
-  return { verdict, timedOut, restart };
+  return { verdict, ocrStatus, timedOut, restart };
 }

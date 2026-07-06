@@ -1,6 +1,12 @@
 import { IssuerBank, OcrStatus } from "@check/database";
 import type { OcrProvider } from "@check/ocr";
-import { assessOcrQuality, detectIssuerBank, extractVoucher, normalizeImage } from "@check/ocr";
+import {
+  assessOcrQuality,
+  detectIssuerBank,
+  extractVoucher,
+  isUnsupportedByOcrPipeline,
+  normalizeImage,
+} from "@check/ocr";
 import { Inject, Injectable, Logger } from "@nestjs/common";
 
 import { PrismaService } from "../database/prisma.service";
@@ -22,6 +28,14 @@ const ISSUER_BANK_MAP: Record<string, IssuerBank> = {
   banco_de_bogota: IssuerBank.BANCO_DE_BOGOTA,
   colpatria: IssuerBank.COLPATRIA,
 };
+
+/**
+ * Nota que se persiste en `ocrText` cuando un PDF entra al pipeline (E09-T6). El
+ * pipeline de OCR (sharp) aún no maneja PDF; en vez de dejar el job reintentando
+ * hasta agotarse (voucher colgado en `PENDING`), se marca `LOW_QUALITY` con este
+ * detalle para el operador. La copy que ve el cliente vive en el front.
+ */
+const PDF_NOT_SUPPORTED_NOTE = "PDF no soportado por el OCR; por ahora solo aceptamos fotos.";
 
 /** Registro `Voucher` mínimo que este servicio necesita leer. */
 export interface VoucherRecord {
@@ -98,6 +112,19 @@ export class OcrService {
     if (!voucher.storagePath) {
       // Falla permanente de datos (no hay imagen que procesar): no tiene sentido reintentar.
       throw new Error(`Voucher ${voucherId} no tiene storagePath: nada que procesar`);
+    }
+
+    // GAP conocido de PDF (E09-T6): el pipeline (sharp) no normaliza PDF. Detectarlo
+    // aquí ANTES de descargar/normalizar evita que sharp lance y el job agote los 3
+    // reintentos dejando el voucher colgado en PENDING. Se marca LOW_QUALITY (falla
+    // permanente de negocio, no se reintenta) para que la PWA pida una foto (E09-T6).
+    if (isUnsupportedByOcrPipeline(voucher.storagePath)) {
+      this.logger.warn(`Voucher ${voucherId}: ${PDF_NOT_SUPPORTED_NOTE}`);
+      await this.prisma.voucher.update({
+        where: { id: voucherId },
+        data: { ocrText: PDF_NOT_SUPPORTED_NOTE, ocrStatus: OcrStatus.LOW_QUALITY },
+      });
+      return;
     }
 
     // Descarga/normalización: si fallan (red, Storage caído, imagen corrupta) se propaga

@@ -82,9 +82,13 @@ Mapeo de semáforo sugerido para la PWA:
 - `apps/api` ahora requiere `REDIS_URL` (default `redis://localhost:6379`),
   la MISMA instancia Redis que `apps/workers`.
 - El bucket `vouchers` debe existir en Supabase Storage (privado).
-- Limitación conocida: el worker de OCR (`normalizeImage`, sharp) todavía no
-  tiene ruta para PDF; un PDF ingresa al pipeline pero fallará la
-  normalización y agotará reintentos (queda `PENDING`). Gap del pipeline
-  (Épica 5), no de este endpoint.
-- Rate limiting por negocio/IP: E09-T7 (pendiente); se montará sobre
-  `PublicController` sin tocar la lógica.
+- PDF (gap del pipeline de OCR): sharp no normaliza PDF. Resuelto en E09-T6
+  (opción a): el worker detecta el PDF por la extensión de `storagePath`
+  (`isUnsupportedByOcrPipeline`) ANTES de descargar/normalizar y lo marca
+  `LOW_QUALITY` en vez de colgarse en `PENDING`; la PWA lo trata como "pedir
+  mejor foto". El endpoint sigue aceptando `application/pdf` en la subida.
+- Rate limiting por negocio/IP: implementado en E09-T7 con `@nestjs/throttler`
+  (`ThrottlerGuard` a nivel de `PublicController`, throttlers nombrados en
+  `PublicModule`). Ingesta: 10/min por IP + 30/min por opaqueId. Polling:
+  60/min por IP. Identificación: sin límite. Exceder → `429` con
+  `Retry-After-<throttler>`.

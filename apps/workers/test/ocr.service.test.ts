@@ -101,6 +101,27 @@ test("comprobante con buena calidad pero no reconocido por ningún extractor: ma
   assert.equal(updates[0]?.data.ocrText, unrecognized);
 });
 
+test("PDF (storagePath .pdf): marca LOW_QUALITY sin descargar/normalizar (no cuelga en PENDING) — E09-T6", async () => {
+  const voucher: VoucherRecord = { id: "vpdf", storagePath: "biz1/vpdf.pdf" };
+  const { store, updates } = makeFakePrisma(voucher);
+  let downloaded = false;
+  const spyDownload: VoucherImageDownloader = {
+    async downloadVoucherImage() {
+      downloaded = true;
+      return new Uint8Array([1, 2, 3]);
+    },
+  };
+  const service = new OcrService(store, spyDownload, new TextOcrProvider(NEQUI_TEXT), identityNormalize);
+
+  await service.process("vpdf");
+
+  // No se lanza (no se reintenta) y se persiste LOW_QUALITY: la PWA pedirá una foto.
+  assert.equal(updates.length, 1);
+  assert.equal(updates[0]?.data.ocrStatus, OcrStatus.LOW_QUALITY);
+  // Ni siquiera se toca Storage: la guarda corta antes de descargar.
+  assert.equal(downloaded, false);
+});
+
 test("error transitorio (ej. Vision falla): no persiste datos parciales y permite reintento vía BullMQ (lanza)", async () => {
   const voucher: VoucherRecord = { id: "v4", storagePath: "biz1/v4.png" };
   const { store, updates } = makeFakePrisma(voucher);

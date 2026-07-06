@@ -29,9 +29,28 @@ export type PublicBusiness = {
 /** Veredicto del semáforo de verificación. */
 export type VoucherVerdict = "PENDING" | "VERIFIED" | "SUSPICIOUS";
 
+/**
+ * Estado del OCR del comprobante (enum `OcrStatus` de Prisma). La PWA lo usa
+ * para distinguir un comprobante ilegible/no reconocido (pedir mejor foto,
+ * E09-T6) de uno que sigue en proceso.
+ */
+export type VoucherOcrStatus = "PENDING" | "PROCESSED" | "LOW_QUALITY" | "FAILED";
+
+/**
+ * Estados de OCR que son fallas de imagen: no vale la pena seguir polleando, el
+ * cliente debe subir una foto mejor (E09-T6). `LOW_QUALITY` = foto ilegible;
+ * `FAILED` = comprobante no reconocido (incluye el PDF, que el pipeline aún no
+ * soporta y el worker marca `LOW_QUALITY`).
+ */
+export const RETRYABLE_OCR_STATUSES = ["LOW_QUALITY", "FAILED"] as const;
+
+export function isImageProblemStatus(ocrStatus: string): boolean {
+  return (RETRYABLE_OCR_STATUSES as readonly string[]).includes(ocrStatus);
+}
+
 /** Respuesta de `GET /public/vouchers/:voucherId`. */
 export type VoucherStatus = {
-  ocrStatus: string;
+  ocrStatus: VoucherOcrStatus;
   verdict: VoucherVerdict | null;
 };
 
