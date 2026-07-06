@@ -9,11 +9,12 @@ import { MailboxService } from "./mailbox/mailbox.service";
 import { MeController } from "./me/me.controller";
 import { OnboardingController } from "./onboarding/onboarding.controller";
 import { OnboardingService } from "./onboarding/onboarding.service";
+import { PublicModule } from "./public/public.module";
 import { SupabaseModule } from "./supabase/supabase.module";
 import { TenantModule } from "./tenant/tenant.module";
 
 @Module({
-  imports: [DatabaseModule, TenantModule, SupabaseModule, IngestionModule],
+  imports: [DatabaseModule, TenantModule, SupabaseModule, IngestionModule, PublicModule],
   controllers: [
     HealthController,
     MeController,

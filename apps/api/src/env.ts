@@ -17,6 +17,9 @@ const envSchema = z.object({
   INBOUND_EMAIL_DOMAIN: z.string().default("inbound.check.local"),
   /// Secreto compartido para autenticar el webhook de Postmark Inbound (E04-T1).
   POSTMARK_INBOUND_SECRET: z.string().default("dev-inbound-secret"),
+  /// Redis para encolar OCR de comprobantes públicos (BullMQ, E09-T4).
+  /// Misma instancia que consumen los workers (cola `ocr-processing`).
+  REDIS_URL: z.string().url().default("redis://localhost:6379"),
 });
 
 export type ApiEnv = z.infer<typeof envSchema>;
