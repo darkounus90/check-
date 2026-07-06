@@ -16,6 +16,7 @@ import type {
 } from "@check/whatsapp";
 import { Inject, Injectable } from "@nestjs/common";
 
+import { CryptoService } from "../crypto/crypto.service";
 import { PrismaService } from "../database/prisma.service";
 import type { OcrQueueService } from "../ocr/ocr.queue";
 import { OCR_QUEUE } from "./whatsapp.tokens";
@@ -60,18 +61,22 @@ export class WhatsAppStore
   constructor(
     @Inject(PrismaService) private readonly prisma: PrismaService,
     @Inject(OCR_QUEUE) private readonly ocrQueue: OcrQueueService,
+    @Inject(CryptoService) private readonly crypto: CryptoService,
   ) {}
 
-  // ── E07-T1: auth-state ──────────────────────────────────────
+  // ── E07-T1: auth-state (cifrado en reposo, E12-T1) ──────────
 
   async loadAuthState(waNumberId: string): Promise<unknown | null> {
     const session = await this.prisma.waSession.findUnique({ where: { waNumberId } });
-    return session?.authState ?? null;
+    if (!session?.authState) return null;
+    // E12-T1: descifra el auth-state; un blob en claro heredado pasa tal cual.
+    return this.crypto.decryptJson(session.authState);
   }
 
   async saveAuthState(waNumberId: string, authState: unknown): Promise<void> {
     // `authState` es un objeto JSON-puro (BufferJSON ya aplicado en `@check/whatsapp`).
-    const data = authState as object;
+    // E12-T1: se cifra antes de persistir (sin la clave, la sesión no es legible).
+    const data = this.crypto.encryptJson(authState) as object;
     await this.prisma.waSession.upsert({
       where: { waNumberId },
       create: { waNumberId, authState: data },

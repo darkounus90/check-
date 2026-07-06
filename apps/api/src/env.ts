@@ -30,6 +30,13 @@ const envSchema = z.object({
   ALERT_WEBHOOK_URL: z.string().url().optional(),
   /// Estilo del webhook: `slack` (campo `text`) o `discord` (campo `content`). (E11-T2)
   ALERT_WEBHOOK_STYLE: z.enum(["slack", "discord"]).default("slack"),
+
+  // ── Hardening / cumplimiento (Épica 12) ────────────────────
+  /// Claves de cifrado en reposo (E12-T1/T2). Formato: `v<n>:<base64-32B>` separadas por coma
+  /// (mayor versión = activa para cifrar; el resto solo descifra ⇒ rotación sin pérdida).
+  /// Opcional: si falta, el cifrado a nivel de aplicación queda desactivado (datos en claro,
+  /// solo aceptable en dev). En producción DEBE definirse.
+  ENCRYPTION_KEYS: z.string().optional(),
 });
 
 export type ApiEnv = z.infer<typeof envSchema>;

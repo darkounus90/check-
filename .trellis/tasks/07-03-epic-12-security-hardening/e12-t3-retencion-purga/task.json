@@ -1,0 +1,12 @@
+{
+  "id": "E12-T3",
+  "name": "e12-t3-retencion-purga",
+  "title": "Politica de retencion y job de purga",
+  "status": "completed",
+  "priority": "P1",
+  "creator": "andres",
+  "assignee": "andres",
+  "createdAt": "2026-07-06",
+  "parent": "07-03-epic-12-security-hardening",
+  "meta": {}
+}

@@ -1,7 +1,10 @@
 import { Module } from "@nestjs/common";
 
+import { CryptoModule } from "./crypto/crypto.module";
+import { DatabaseModule } from "./database/database.module";
 import { ObservabilityModule } from "./observability/observability.module";
 import { OcrModule } from "./ocr/ocr.module";
+import { RetentionModule } from "./retention/retention.module";
 import { VerificationModule } from "./verification/verification.module";
 import { WhatsAppModule } from "./whatsapp/whatsapp.module";
 
@@ -17,6 +20,15 @@ import { WhatsAppModule } from "./whatsapp/whatsapp.module";
  * se activa con `WHATSAPP_ENABLED=true`. Humanización/warmeo/pool (Grupos B/C) se suman aquí.
  */
 @Module({
-  imports: [ObservabilityModule, OcrModule, VerificationModule, WhatsAppModule],
+  imports: [
+    DatabaseModule,
+    CryptoModule,
+    ObservabilityModule,
+    OcrModule,
+    VerificationModule,
+    WhatsAppModule,
+    // E12-T3: job de purga por política de retención.
+    RetentionModule,
+  ],
 })
 export class AppModule {}

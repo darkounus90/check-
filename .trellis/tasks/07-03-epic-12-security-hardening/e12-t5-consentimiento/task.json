@@ -1,0 +1,12 @@
+{
+  "id": "E12-T5",
+  "name": "e12-t5-consentimiento",
+  "title": "Consentimiento y aviso de privacidad",
+  "status": "completed",
+  "priority": "P1",
+  "creator": "andres",
+  "assignee": "andres",
+  "createdAt": "2026-07-06",
+  "parent": "07-03-epic-12-security-hardening",
+  "meta": {}
+}

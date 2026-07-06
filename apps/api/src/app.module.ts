@@ -1,7 +1,11 @@
 import { Module } from "@nestjs/common";
 
 import { AccountsController } from "./accounts/accounts.controller";
+import { AuditModule } from "./audit/audit.module";
+import { ConsentModule } from "./consent/consent.module";
+import { CryptoModule } from "./crypto/crypto.module";
 import { DatabaseModule } from "./database/database.module";
+import { HabeasDataModule } from "./habeas-data/habeas-data.module";
 import { HealthController } from "./health/health.controller";
 import { IngestionModule } from "./ingestion/ingestion.module";
 import { MailboxController } from "./mailbox/mailbox.controller";
@@ -24,6 +28,11 @@ import { TenantModule } from "./tenant/tenant.module";
     SupabaseModule,
     IngestionModule,
     PublicModule,
+    // Hardening / cumplimiento (Épica 12): cifrado, auditoría, habeas data, consentimiento.
+    CryptoModule,
+    AuditModule,
+    HabeasDataModule,
+    ConsentModule,
   ],
   controllers: [
     HealthController,

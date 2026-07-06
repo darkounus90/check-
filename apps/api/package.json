@@ -8,7 +8,7 @@
     "dev": "node --watch dist/main.js",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint src",
-    "test": "tsx --import ./test/setup-env.ts --test test/public-vouchers.service.test.ts test/public-rate-limit.test.ts test/qr-router.test.ts test/qr-router.service.test.ts test/qr.service.test.ts test/all-exceptions.filter.test.ts test/ingestion-parser-alert.test.ts"
+    "test": "tsx --import ./test/setup-env.ts --test test/public-vouchers.service.test.ts test/public-rate-limit.test.ts test/qr-router.test.ts test/qr-router.service.test.ts test/qr.service.test.ts test/all-exceptions.filter.test.ts test/ingestion-parser-alert.test.ts test/habeas-data.service.test.ts test/compliance-e2e.test.ts"
   },
   "dependencies": {
     "@check/parsers": "workspace:*",

@@ -45,6 +45,20 @@ const envSchema = z.object({
   QUEUE_MONITOR_MAX_WAITING: z.coerce.number().int().nonnegative().default(100),
   QUEUE_MONITOR_MAX_FAILED: z.coerce.number().int().nonnegative().default(20),
   QUEUE_MONITOR_MAX_OLDEST_MS: z.coerce.number().int().nonnegative().default(300_000),
+
+  // ── Hardening / cumplimiento (Épica 12) ────────────────────
+  /// Claves de cifrado en reposo (E12-T1/T2). Formato: `v<n>:<base64-32B>` separadas por coma
+  /// (mayor versión = activa para cifrar; el resto solo descifra ⇒ rotación sin pérdida).
+  /// Opcional: si falta, el cifrado a nivel de aplicación queda desactivado (solo dev).
+  ENCRYPTION_KEYS: z.string().optional(),
+  /// Ventanas de retención en días por tipo de dato (E12-T3). Opcionales; caen a los
+  /// defaults de `@check/shared` (voucher 365, bankEmail 365, qrResolutionLog 180, waSession 90).
+  RETENTION_VOUCHER_DAYS: z.coerce.number().int().positive().optional(),
+  RETENTION_BANK_EMAIL_DAYS: z.coerce.number().int().positive().optional(),
+  RETENTION_QR_LOG_DAYS: z.coerce.number().int().positive().optional(),
+  RETENTION_WA_SESSION_DAYS: z.coerce.number().int().positive().optional(),
+  /// Intervalo del job de purga de retención (E12-T3). Default: cada 24h.
+  RETENTION_PURGE_INTERVAL_MS: z.coerce.number().int().positive().default(86_400_000),
 });
 
 export type WorkersEnv = z.infer<typeof envSchema>;

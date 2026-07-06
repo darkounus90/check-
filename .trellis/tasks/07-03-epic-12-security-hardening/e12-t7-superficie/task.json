@@ -1,0 +1,12 @@
+{
+  "id": "E12-T7",
+  "name": "e12-t7-superficie",
+  "title": "Revision de superficie de seguridad",
+  "status": "completed",
+  "priority": "P1",
+  "creator": "andres",
+  "assignee": "andres",
+  "createdAt": "2026-07-06",
+  "parent": "07-03-epic-12-security-hardening",
+  "meta": {}
+}

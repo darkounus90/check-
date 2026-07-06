@@ -1,0 +1,12 @@
+{
+  "id": "E12-T6",
+  "name": "e12-t6-auditoria",
+  "title": "Registro de auditoria inmutable",
+  "status": "completed",
+  "priority": "P1",
+  "creator": "andres",
+  "assignee": "andres",
+  "createdAt": "2026-07-06",
+  "parent": "07-03-epic-12-security-hardening",
+  "meta": {}
+}

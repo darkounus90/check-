@@ -265,6 +265,14 @@ export function VoucherFlow({ opaqueId, businessName }: VoucherFlowProps) {
           <p className="text-center text-xs text-slate-500">
             Formatos aceptados: JPG, PNG, WebP o PDF. Máximo 10 MB.
           </p>
+          {/* Aviso de privacidad / consentimiento (Épica 12, E12-T5): el titular VE el aviso
+              antes de enviar; enviar implica aceptar el tratamiento (habeas data, Ley 1581/2012).
+              Tus datos se guardan cifrados y por el tiempo necesario para verificar el pago. */}
+          <p className="text-center text-[11px] leading-relaxed text-slate-400">
+            🔒 Al enviar tu comprobante aceptas que {businessName} trate tus datos con la finalidad
+            de verificar el pago y prevenir fraude. Se almacenan cifrados y por el tiempo necesario.
+            Puedes ejercer tus derechos de acceso y eliminación (habeas data, Ley 1581 de 2012).
+          </p>
           {validationError ? (
             <p role="alert" className="rounded-md bg-red-50 p-3 text-sm text-red-700">
               {validationError}

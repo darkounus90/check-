@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
+import type { CryptoService } from "../src/crypto/crypto.service";
 import type { PrismaService } from "../src/database/prisma.service";
 import type { OcrQueueService } from "../src/ocr/ocr.queue";
 import { WhatsAppStore } from "../src/whatsapp/whatsapp.store";
@@ -13,7 +14,12 @@ import { WhatsAppStore } from "../src/whatsapp/whatsapp.store";
 
 function makeStore(prisma: Partial<PrismaService>): WhatsAppStore {
   const ocrQueue = { enqueueVoucherOcr: async () => {} } as unknown as OcrQueueService;
-  return new WhatsAppStore(prisma as PrismaService, ocrQueue);
+  // Crypto passthrough para estos tests (el cifrado del auth-state se prueba aparte).
+  const crypto = {
+    encryptJson: (v: unknown) => v,
+    decryptJson: (v: unknown) => v,
+  } as unknown as CryptoService;
+  return new WhatsAppStore(prisma as PrismaService, ocrQueue, crypto);
 }
 
 test("resolveBusinessId: devuelve el negocio asignado de mayor prioridad", async () => {

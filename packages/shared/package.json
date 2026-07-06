@@ -18,7 +18,7 @@
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint src",
-    "test": "tsx --test test/logger.test.ts test/alerts.test.ts test/alert-triggers.test.ts test/metrics.test.ts test/health.test.ts test/parser-failure-tracker.test.ts"
+    "test": "tsx --test test/logger.test.ts test/alerts.test.ts test/alert-triggers.test.ts test/metrics.test.ts test/health.test.ts test/parser-failure-tracker.test.ts test/crypto.test.ts test/retention.test.ts test/audit.test.ts test/consent.test.ts"
   },
   "dependencies": {
     "zod": "^3.24.1"

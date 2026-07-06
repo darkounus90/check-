@@ -1,0 +1,12 @@
+{
+  "id": "E12-T4",
+  "name": "e12-t4-habeas-data",
+  "title": "Habeas data: export y eliminacion",
+  "status": "completed",
+  "priority": "P1",
+  "creator": "andres",
+  "assignee": "andres",
+  "createdAt": "2026-07-06",
+  "parent": "07-03-epic-12-security-hardening",
+  "meta": {}
+}

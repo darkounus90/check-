@@ -13,6 +13,16 @@ export * from "./metrics.js";
 export * from "./parser-failure-tracker.js";
 
 /**
+ * Hardening de seguridad y cumplimiento (Épica 12): cifrado en reposo (crypto), política de
+ * retención (retention), auditoría inmutable (audit) y consentimiento/aviso de privacidad
+ * (consent). Reexportados de forma ADITIVA para api/workers/web.
+ */
+export * from "./audit.js";
+export * from "./consent.js";
+export * from "./crypto.js";
+export * from "./retention.js";
+
+/**
  * Tipos y utilidades compartidas del monorepo CHECK.
  *
  * Convenciones (ver .trellis/spec/prd.md):

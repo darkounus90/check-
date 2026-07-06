@@ -110,6 +110,8 @@ model Business {
   poolAssignments   NumberPoolAssignment[]
   moneyOpLogs       MoneyOpLog[]
   qrResolutionLogs  QrResolutionLog[]
+  dataAccessAudits  DataAccessAudit[]
+  privacyConsents   PrivacyConsent[]
 
   @@map("businesses")
 }
@@ -431,4 +433,63 @@ model MoneyOpLog {
   @@index([businessId])
   @@index([businessId, transactionId])
   @@map("money_op_logs")
+}
+
+// ─────────────────────────────────────────────────────────────
+// Hardening y cumplimiento (Épica 12)
+// ─────────────────────────────────────────────────────────────
+
+/// Registro INMUTABLE de accesos a datos sensibles (E12-T6). Append-only a nivel de BD: la
+/// migración añade un trigger que bloquea UPDATE/DELETE incluso para el rol de servicio, y
+/// políticas RLS `for update/delete using(false)` para tenants. Responde quién/qué/cuándo.
+model DataAccessAudit {
+  id String @id @default(cuid())
+
+  /// Negocio dueño del dato (null en acciones cross-tenant del staff/sistema).
+  businessId String?
+
+  /// Actor y su tipo (user | system | data_subject).
+  actorId   String
+  actorType String
+
+  /// Recurso y acción (voucher/voucher_artifact/bank_email/…, read/export/decrypt/…).
+  resource   String
+  action     String
+  resourceId String?
+
+  /// Metadatos JSON (IP, filtros, conteos). Sin PII cruda.
+  metadata Json?
+
+  occurredAt DateTime @default(now())
+
+  business Business? @relation(fields: [businessId], references: [id], onDelete: SetNull)
+
+  @@index([businessId, occurredAt])
+  @@index([resource, resourceId])
+  @@map("data_access_audits")
+}
+
+/// Registro de consentimiento y aviso de privacidad (E12-T5). Deja traza de que un titular
+/// vio/aceptó el aviso en un punto de entrada (pwa/dashboard/whatsapp).
+model PrivacyConsent {
+  id String @id @default(cuid())
+
+  businessId String?
+
+  /// Canal donde se mostró el aviso.
+  channel String
+  /// Identificador del titular en ese canal (userId, ip/uuid, JID de WhatsApp).
+  subjectRef String
+  /// Versión del aviso aceptada (se re-solicita al cambiar el copy).
+  noticeVersion String
+
+  metadata Json?
+
+  acceptedAt DateTime @default(now())
+
+  business Business? @relation(fields: [businessId], references: [id], onDelete: SetNull)
+
+  @@index([businessId, channel])
+  @@index([channel, subjectRef])
+  @@map("privacy_consents")
 }
