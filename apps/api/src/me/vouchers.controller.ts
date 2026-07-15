@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   Controller,
+  Get,
   Post,
   UploadedFile,
   UseGuards,
@@ -17,6 +18,15 @@ import {
   type UploadedVoucherFile,
 } from "../public/public-vouchers.service";
 import type { TenantContext } from "../tenant/tenant.service";
+import { type DashboardVoucherDto, VoucherListService } from "./voucher-list.service";
+
+/** Inicio del día de HOY en zona Bogotá (UTC-5 fijo, sin DST), como instante UTC. */
+function startOfTodayBogota(now: Date = new Date()): Date {
+  const bogota = new Date(now.getTime() - 5 * 60 * 60 * 1000);
+  return new Date(
+    Date.UTC(bogota.getUTCFullYear(), bogota.getUTCMonth(), bogota.getUTCDate(), 5, 0, 0),
+  );
+}
 
 /**
  * Gap #9: subida AUTENTICADA de comprobante desde el dashboard (cajero o dueño). A
@@ -33,12 +43,25 @@ import type { TenantContext } from "../tenant/tenant.service";
 @Controller("vouchers")
 @UseGuards(SupabaseJwtGuard, RolesGuard)
 export class VouchersController {
-  constructor(private readonly vouchers: PublicVouchersService) {}
+  constructor(
+    private readonly vouchers: PublicVouchersService,
+    private readonly voucherList: VoucherListService,
+  ) {}
 
   @Post()
   @UseInterceptors(FileInterceptor("file", { limits: { fileSize: MAX_VOUCHER_FILE_BYTES } }))
   upload(@CurrentTenant() tenant: TenantContext, @UploadedFile() file?: UploadedVoucherFile) {
     if (!file) throw new BadRequestException("Falta el archivo (campo multipart `file`)");
     return this.vouchers.ingestForBusiness(tenant.businessId, file);
+  }
+
+  /**
+   * Lista los comprobantes de HOY del negocio del usuario (incluye los que aún están en
+   * OCR o que fallaron, que no tienen `Transaction`). Alimenta el resumen "Comprobantes de
+   * hoy" del histórico. El negocio se resuelve del JWT (nunca de un parámetro del cliente).
+   */
+  @Get()
+  listToday(@CurrentTenant() tenant: TenantContext): Promise<DashboardVoucherDto[]> {
+    return this.voucherList.listSince(tenant.businessId, startOfTodayBogota());
   }
 }

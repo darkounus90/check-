@@ -15,6 +15,7 @@ import { QrController } from "./me/qr.controller";
 import { QrService } from "./me/qr.service";
 import { TransactionsController } from "./me/transactions.controller";
 import { TransactionsService } from "./me/transactions.service";
+import { VoucherListService } from "./me/voucher-list.service";
 import { VouchersController } from "./me/vouchers.controller";
 import { ObservabilityModule } from "./observability/observability.module";
 import { OnboardingController } from "./onboarding/onboarding.controller";
@@ -47,6 +48,12 @@ import { TenantModule } from "./tenant/tenant.module";
     AccountsController,
     MailboxController,
   ],
-  providers: [OnboardingService, MailboxService, QrService, TransactionsService],
+  providers: [
+    OnboardingService,
+    MailboxService,
+    QrService,
+    TransactionsService,
+    VoucherListService,
+  ],
 })
 export class AppModule {}
