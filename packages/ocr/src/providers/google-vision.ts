@@ -17,14 +17,43 @@ function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
+/** Opciones de construcción del cliente Vision que este provider usa. */
+interface VisionClientOptions {
+  credentials?: { client_email: string; private_key: string };
+  projectId?: string;
+}
+
 /** Forma mínima del módulo `@google-cloud/vision` que este provider consume. */
 interface VisionModuleLike {
-  ImageAnnotatorClient: new () => VisionClientLike;
+  ImageAnnotatorClient: new (opts?: VisionClientOptions) => VisionClientLike;
 }
 
 /** Carga real del SDK vía import dinámico (no acopla el build a la credencial). */
 function loadVisionSdk(): Promise<VisionModuleLike> {
   return import("@google-cloud/vision") as unknown as Promise<VisionModuleLike>;
+}
+
+/**
+ * Resuelve las opciones de credencial del cliente Vision.
+ *
+ * En hosts sin sistema de archivos persistente (p.ej. Railway) no se puede usar la
+ * convención de `GOOGLE_APPLICATION_CREDENTIALS` apuntando a un archivo. Si está
+ * `GCP_CREDENTIALS_B64` (el JSON de la service account en base64), se decodifica y se
+ * pasan las credenciales en memoria. Si no está, se devuelve `undefined` para que el
+ * SDK caiga a la convención estándar (ADC / `GOOGLE_APPLICATION_CREDENTIALS`).
+ */
+function clientOptionsFromEnv(): VisionClientOptions | undefined {
+  const b64 = process.env.GCP_CREDENTIALS_B64;
+  if (!b64) return undefined;
+  const json = JSON.parse(Buffer.from(b64, "base64").toString("utf8")) as {
+    client_email: string;
+    private_key: string;
+    project_id?: string;
+  };
+  return {
+    credentials: { client_email: json.client_email, private_key: json.private_key },
+    ...(json.project_id ? { projectId: json.project_id } : {}),
+  };
 }
 
 /**
@@ -55,7 +84,7 @@ export class GoogleVisionProvider implements OcrProvider {
 
     try {
       const { ImageAnnotatorClient } = await this.loadSdk();
-      this.client = new ImageAnnotatorClient();
+      this.client = new ImageAnnotatorClient(clientOptionsFromEnv());
       return ok(this.client);
     } catch (error) {
       return err(
