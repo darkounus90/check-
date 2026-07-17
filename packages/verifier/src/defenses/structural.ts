@@ -47,7 +47,9 @@ const APPROVAL_NUMBER_RULES: Readonly<Record<string, ApprovalNumberRule>> = {
   colpatria: { minLength: 5, maxLength: 10 },
 };
 
-const DIGITS_ONLY = /^\d+$/;
+// Los comprobantes reales usan referencias ALFANUMÉRICAS (ej. Nequi "M27068114"), no solo
+// dígitos. Se valida formato alfanumérico + rango de longitud plausible por banco.
+const ALPHANUMERIC = /^[A-Za-z0-9]+$/;
 
 function evaluateStructural(input: DefenseInput): DefenseSignal {
   const { issuerBank, approvalNumber } = input.voucher;
@@ -65,9 +67,9 @@ function evaluateStructural(input: DefenseInput): DefenseSignal {
     });
   }
 
-  if (!DIGITS_ONLY.test(approvalNumber)) {
+  if (!ALPHANUMERIC.test(approvalNumber)) {
     return failSignal(STRUCTURAL_KIND, {
-      detail: `número de aprobación "${approvalNumber}" contiene caracteres no numéricos, formato inválido para ${issuerBank}`,
+      detail: `número de aprobación "${approvalNumber}" contiene caracteres inválidos (no alfanuméricos) para ${issuerBank}`,
     });
   }
 
