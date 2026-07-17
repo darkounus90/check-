@@ -17,6 +17,18 @@ export interface InboundEmail {
   To?: string;
 }
 
+/**
+ * Extrae el `inboundMailboxId` del destinatario, soportando dos esquemas:
+ * - Dominio propio (Postmark): `biz-esquina@midominio` → `biz-esquina` (la parte local).
+ * - Dirección compartida con plus-addressing (CloudMailin/Gmail, sin dominio propio):
+ *   `abc123+biz-esquina@cloudmailin.net` → `biz-esquina` (lo que va tras el `+`).
+ */
+export function extractMailboxId(recipient: string): string {
+  const local = recipient.split("@")[0] ?? "";
+  const plus = local.indexOf("+");
+  return plus >= 0 ? local.slice(plus + 1) : local;
+}
+
 const BANK_MAP: Record<string, ReceiverBank> = {
   bancolombia: ReceiverBank.BANCOLOMBIA,
   davivienda: ReceiverBank.DAVIVIENDA,
@@ -43,7 +55,7 @@ export class IngestionService {
 
   async ingest(payload: InboundEmail): Promise<{ status: string; bankEmailId?: string }> {
     const recipient = payload.OriginalRecipient ?? payload.To ?? "";
-    const mailboxId = recipient.split("@")[0] ?? "";
+    const mailboxId = extractMailboxId(recipient);
     const business = await this.prisma.business.findUnique({
       where: { inboundMailboxId: mailboxId },
     });
