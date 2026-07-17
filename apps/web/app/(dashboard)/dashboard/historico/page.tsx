@@ -47,7 +47,7 @@ export default async function HistoricoPage() {
           Todas las verificaciones de tu negocio, con filtros por estado, fecha y cuenta.
         </p>
       </div>
-      <TodayVouchers vouchers={todayVouchers} />
+      <TodayVouchers initialVouchers={todayVouchers} />
       <HistoryView transactions={transactions} accounts={accounts} loadError={loadError} />
     </section>
   );

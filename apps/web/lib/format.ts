@@ -11,7 +11,10 @@ export function formatCents(amountCents: number): string {
   }).format(value);
 }
 
-/** Fecha + hora legible (es-CO). Devuelve "—" para entradas inválidas. */
+/**
+ * Fecha + hora legible (es-CO) SIEMPRE en zona `America/Bogota`, sin importar la zona del
+ * servidor (Vercel renderiza en UTC). Devuelve "—" para entradas inválidas.
+ */
 export function formatDateTime(iso: string | null): string {
   if (!iso) return "—";
   const ts = Date.parse(iso);
@@ -19,5 +22,6 @@ export function formatDateTime(iso: string | null): string {
   return new Intl.DateTimeFormat("es-CO", {
     dateStyle: "medium",
     timeStyle: "short",
+    timeZone: "America/Bogota",
   }).format(new Date(ts));
 }
