@@ -18,6 +18,29 @@ function header(headers: CloudMailinPayload["headers"], name: string): string | 
   return Array.isArray(value) ? value[0] : value;
 }
 
+/** Convierte HTML a texto plano legible (para correos sin parte text/plain, ej. reenvío
+ * automático de Gmail que manda el correo original solo-HTML). */
+function htmlToText(html: string): string {
+  return html
+    .replace(/<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(Number(n)))
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/** Cuerpo del correo: usa el texto plano; si viene vacío, cae al HTML sin etiquetas. */
+function bodyText(payload: CloudMailinPayload): string | undefined {
+  if (payload.plain && payload.plain.trim().length > 0) return payload.plain;
+  if (payload.html && payload.html.trim().length > 0) return htmlToText(payload.html);
+  return undefined;
+}
+
 @Controller("webhooks")
 export class WebhooksController {
   constructor(private readonly ingestion: IngestionService) {}
@@ -53,7 +76,7 @@ export class WebhooksController {
     const email: InboundEmail = {
       From: payload.envelope?.from ?? header(payload.headers, "from"),
       Subject: header(payload.headers, "subject"),
-      TextBody: payload.plain,
+      TextBody: bodyText(payload),
       To: recipient,
       OriginalRecipient: recipient,
     };
