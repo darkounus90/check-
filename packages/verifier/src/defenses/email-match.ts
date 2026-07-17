@@ -48,11 +48,20 @@ function isMatch(
   email: ParsedBankEmail,
   windowMinutes: number,
 ): boolean {
+  // Monto y ventana de tiempo son obligatorios en TODOS los casos.
+  if (email.amount !== voucher.amount) return false;
+  if (!isWithinWindow(voucher.paidAtUtc, email.occurredAtUtc, windowMinutes)) return false;
+
+  // Correo "ligero" (ej. aviso Bre-B de Nequi): no trae referencia ni cuenta destino, así
+  // que solo se puede cruzar por monto + tiempo. Es un cruce más débil, aceptado a propósito
+  // para soportar Bre-B; el flujo de producción usa bancos tradicionales con correo completo.
+  const isLightEmail = !email.approvalNumber && !email.destinationAccount;
+  if (isLightEmail) return true;
+
+  // Correo completo (banco tradicional): exige además referencia + cuenta destino.
   return (
-    email.amount === voucher.amount &&
     email.approvalNumber === voucher.approvalNumber &&
-    email.destinationAccount === voucher.destinationAccount &&
-    isWithinWindow(voucher.paidAtUtc, email.occurredAtUtc, windowMinutes)
+    email.destinationAccount === voucher.destinationAccount
   );
 }
 

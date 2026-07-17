@@ -3,6 +3,7 @@ import { err, type Result } from "@check/shared";
 import { bancolombiaV1 } from "./banks/bancolombia.v1.js";
 import { bbvaV1 } from "./banks/bbva.v1.js";
 import { daviviendaV1 } from "./banks/davivienda.v1.js";
+import { nequiBreBV1 } from "./banks/nequi-breb.v1.js";
 import type { BankEmailParser, ParsedBankEmail } from "./types.js";
 
 export type { BankEmailParser, ParsedBankEmail } from "./types.js";
@@ -13,6 +14,9 @@ export { bogotaToUtcIso, colombianAmountToCents } from "./util.js";
  * Agregar un banco = añadir su parser aquí, sin tocar el dispatcher.
  */
 export const bankEmailParserRegistry: readonly BankEmailParser[] = [
+  // Bre-B de Nequi va primero: su aviso menciona "Davivienda" (banco de origen) y no debe
+  // caer en el parser de Davivienda. Su `matches` exige "nequi" + "bre-b", así que es específico.
+  nequiBreBV1,
   bancolombiaV1,
   daviviendaV1,
   bbvaV1,
