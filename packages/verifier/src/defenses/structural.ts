@@ -30,21 +30,18 @@ interface ApprovalNumberRule {
  * deben refinarse cuando existan comprobantes reales o documentación oficial del
  * emisor.
  */
+// Rangos AMPLIOS: las referencias reales varían mucho (ej. Nequi "M27068114" = 9,
+// Bancolombia Bre-B "TR5d3B0ZDhEC" = 12 alfanumérico). Esta defensa solo descarta formatos
+// absurdos (muy cortos/largos o no alfanuméricos); la verificación fuerte es la Defensa 1
+// (cruce con el correo del banco) y la Defensa 2 (base global de aprobaciones).
 const APPROVAL_NUMBER_RULES: Readonly<Record<string, ApprovalNumberRule>> = {
-  // Fixture: "Comprobante 1234567" (7 dígitos).
-  nequi: { minLength: 6, maxLength: 10 },
-  // Fixture: "Comprobante No. 998877" (6 dígitos).
-  bancolombia: { minLength: 5, maxLength: 10 },
-  // Fixture: "Referencia 55667788" (8 dígitos) — DaviPlata usa referencias más largas.
-  daviplata: { minLength: 6, maxLength: 12 },
-  // Fixture: "Aprobacion 123456" (6 dígitos).
-  davivienda: { minLength: 5, maxLength: 10 },
-  // Fixture: "Operacion 456789" (6 dígitos).
-  bbva: { minLength: 5, maxLength: 10 },
-  // Fixture: "Numero de aprobacion 7654321" (7 dígitos).
-  banco_de_bogota: { minLength: 6, maxLength: 10 },
-  // Fixture: "Aprobacion 246810" (6 dígitos).
-  colpatria: { minLength: 5, maxLength: 10 },
+  nequi: { minLength: 4, maxLength: 24 },
+  bancolombia: { minLength: 4, maxLength: 24 },
+  daviplata: { minLength: 4, maxLength: 24 },
+  davivienda: { minLength: 4, maxLength: 24 },
+  bbva: { minLength: 4, maxLength: 24 },
+  banco_de_bogota: { minLength: 4, maxLength: 24 },
+  colpatria: { minLength: 4, maxLength: 24 },
 };
 
 // Los comprobantes reales usan referencias ALFANUMÉRICAS (ej. Nequi "M27068114"), no solo

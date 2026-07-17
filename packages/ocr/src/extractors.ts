@@ -114,9 +114,11 @@ export const bancolombiaVoucherV1 = build({
   bank: "bancolombia",
   version: "v1",
   // El comprobante real de Bancolombia NO trae la palabra "bancolombia" (el logo es imagen).
-  // Se detecta por su terminología propia "Producto destino/origen".
-  match: /bancolombia|producto\s+(?:destino|origen)/i,
-  approval: /Comprobante\s*No\.?\s*(\d+)/i,
+  // Se detecta por su terminología propia: "Producto destino/origen" (formato clásico) o
+  // "¿A quién le llegó la plata?" (formato Bre-B).
+  match: /bancolombia|producto\s+(?:destino|origen)|a\s+qui[eé]n\s+le\s+lleg[oó]\s+la\s+plata/i,
+  // Referencia alfanumérica: clásica "0000050800" o Bre-B "TR5d3B0ZDhEC".
+  approval: /Comprobante\s*No\.?\s*([A-Za-z0-9]+)/i,
   amount: VALOR_BANCOLOMBIA,
   account: CUENTA_BANCOLOMBIA,
   beneficiary: PRODUCTO_DESTINO_NAME,
