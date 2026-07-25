@@ -29,7 +29,12 @@ import {
   realSleep,
 } from "./humanizer.js";
 import { detectVoucherMedia, isProcessableIncoming, remoteJidOf } from "./incoming.js";
-import { pickTemplate, type TemplateKind, templateKindForVerdict } from "./templates.js";
+import {
+  formatCentsCop,
+  pickTemplate,
+  type TemplateKind,
+  templateKindForVerdict,
+} from "./templates.js";
 import type {
   BusinessResolver,
   OcrEnqueuer,
@@ -285,7 +290,11 @@ export class WhatsAppInstance {
     if (!context) return false;
     // Defensa: esta instancia solo responde comprobantes que ella misma recibió.
     if (context.waNumberId !== this.deps.waNumberId) return false;
-    return this.sendTemplated(context.remoteJid, templateKindForVerdict(verdict));
+    return this.sendTemplated(
+      context.remoteJid,
+      templateKindForVerdict(verdict),
+      verdict === "VERIFIED" ? context.amountCents : null,
+    );
   }
 
   /**
@@ -295,12 +304,21 @@ export class WhatsAppInstance {
    * por horario del negocio (E07-T4) o por límite de warmeo (E07-T6). Si no hay store de
    * rotación configurado, usa la primera variante (comportamiento base).
    */
-  private async sendTemplated(to: string, kind: TemplateKind): Promise<boolean> {
+  private async sendTemplated(
+    to: string,
+    kind: TemplateKind,
+    amountCents: number | null = null,
+  ): Promise<boolean> {
     const lastIndex = this.deps.templateRotation
       ? await this.deps.templateRotation.getLastTemplateIndex(this.deps.waNumberId, kind)
       : null;
     const picked = pickTemplate(kind, lastIndex);
-    const sent = await this.sendMessage(to, picked.text);
+    // En el 🟢 agregamos el monto recibido para que el cajero sepa de cuánto es el pago.
+    const body =
+      kind === "verified" && amountCents != null
+        ? `${picked.text}\n\n💰 Monto recibido: ${formatCentsCop(amountCents)}`
+        : picked.text;
+    const sent = await this.sendMessage(to, body);
     if (sent && this.deps.templateRotation) {
       // Solo avanzamos el índice si de verdad se envió (no si se pospuso por horario/warmeo),
       // para no "gastar" una variante en un mensaje que no salió.

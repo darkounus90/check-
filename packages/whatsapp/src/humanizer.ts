@@ -68,8 +68,10 @@ export interface HumanizerEffects {
 }
 
 const DEFAULT_TIMING = {
-  minSendDelayMs: 1000,
-  maxSendDelayMs: 4000,
+  // Delay mínimo 3s (antes 1s): la respuesta nunca es inmediata, para parecer humana y
+  // reducir el riesgo de detección/baneo por parte de WhatsApp. Rango efectivo 3–6s.
+  minSendDelayMs: 3000,
+  maxSendDelayMs: 6000,
   readDelayMs: 500,
 } as const;
 

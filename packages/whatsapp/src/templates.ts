@@ -41,14 +41,23 @@ export const TEMPLATES: Readonly<Record<TemplateKind, readonly string[]>> = {
     "🟢 Verificado ✅ el pago está correcto, ya puedes despachar el pedido.",
   ],
   suspicious: [
-    "🚨 ⚠️ No pudimos verificar este pago. NO entregues el pedido y confirma con el negocio.",
-    "🚨 ⚠️ Ojo: este comprobante no lo pudimos validar. NO entregues y verifica con el negocio.",
-    "🚨 ⚠️ Cuidado, no logramos confirmar el pago. NO despaches el pedido y consulta con el negocio.",
-    "🚨 ⚠️ Este pago no nos cuadra. NO entregues el pedido hasta confirmar con el negocio.",
-    "🚨 ⚠️ Alerta: no pudimos verificar el comprobante. NO entregues y comunícate con el negocio.",
-    "🚨 ⚠️ No conseguimos validar este pago. Por seguridad NO entregues y confirma con el negocio.",
+    "🚨 No pudimos verificar este pago todavía. Puede que la foto no esté clara — tómala de nuevo, bien nítida y completa (que se vea el monto, la fecha y el número). Si vuelve a fallar, no entregues.",
+    "🚨 Aún no logramos confirmar este comprobante. Intenta enviar otra foto más nítida, con toda la pantalla visible. Si sigue sin cuadrar, no entregues el pedido.",
+    "🚨 No nos cuadra este pago. Reenvía la foto del comprobante, asegurándote de que se vea claro el monto y la fecha. Si persiste, mejor no entregues.",
+    "🚨 No pudimos validar el pago. ¿Podrías tomar la foto de nuevo, bien enfocada y completa? Si aun así no verifica, no entregues y avisa al negocio.",
+    "🚨 Este comprobante no lo pudimos confirmar. Envía otra foto más clara (sin recortes ni reflejos). Si vuelve a salir así, no entregues el pedido.",
   ],
 };
+
+/** Formatea centavos como pesos colombianos para los mensajes (ej. 1000000 → "$ 10.000"). */
+export function formatCentsCop(amountCents: number): string {
+  return new Intl.NumberFormat("es-CO", {
+    style: "currency",
+    currency: "COP",
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(Math.round(amountCents / 100));
+}
 
 /** Mapea un veredicto resuelto (E07-T3) al tipo de plantilla que rota (E07-T5). */
 export function templateKindForVerdict(verdict: ResolvedVerdict): TemplateKind {

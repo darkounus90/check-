@@ -128,12 +128,21 @@ export class WhatsAppStore
 
   async getVoucherContext(
     voucherId: string,
-  ): Promise<{ remoteJid: string; waNumberId: string } | null> {
+  ): Promise<{ remoteJid: string; waNumberId: string; amountCents: number | null } | null> {
     const context = await this.prisma.waVoucherContext.findUnique({
       where: { voucherId },
-      select: { remoteJid: true, waNumberId: true },
+      select: {
+        remoteJid: true,
+        waNumberId: true,
+        voucher: { select: { amountCents: true } },
+      },
     });
-    return context;
+    if (!context) return null;
+    return {
+      remoteJid: context.remoteJid,
+      waNumberId: context.waNumberId,
+      amountCents: context.voucher?.amountCents ?? null,
+    };
   }
 
   /**

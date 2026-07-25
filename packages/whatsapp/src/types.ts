@@ -68,10 +68,15 @@ export type ResolvedVerdict = "VERIFIED" | "SUSPICIOUS";
 
 /** Lee de qué chat/número responder un veredicto, a partir del `voucherId` (E07-T3). */
 export interface VoucherContextReader {
-  /** Devuelve el contexto WhatsApp de un comprobante, o `null` si no vino por WhatsApp. */
-  getVoucherContext(
-    voucherId: string,
-  ): Promise<{ remoteJid: string; waNumberId: string } | null>;
+  /**
+   * Devuelve el contexto WhatsApp de un comprobante, o `null` si no vino por WhatsApp.
+   * `amountCents` es el monto leído por OCR (para mostrarlo en el mensaje 🟢); `null` si no se leyó.
+   */
+  getVoucherContext(voucherId: string): Promise<{
+    remoteJid: string;
+    waNumberId: string;
+    amountCents: number | null;
+  } | null>;
 }
 
 // ─────────────────────────────────────────────────────────────
