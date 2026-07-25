@@ -39,8 +39,13 @@ export class PrismaApprovalNumberGateway implements ApprovalNumberGateway {
   }
 
   async register(bank: string, approvalNumber: string, businessId: string): Promise<void> {
-    await this.prisma.$queryRaw`
-      select approval_number_register(${bank}, ${approvalNumber}, ${businessId})
-    `;
+    // $executeRawUnsafe (no $queryRaw): la función retorna void, y $queryRaw no ejecutaba el
+    // INSERT de forma fiable. Mismo patrón que la ingesta de correo (que sí registra bien).
+    await this.prisma.$executeRawUnsafe(
+      `select approval_number_register($1, $2, $3)`,
+      bank,
+      approvalNumber,
+      businessId,
+    );
   }
 }
