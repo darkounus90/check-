@@ -152,14 +152,20 @@ export class WhatsAppManager implements OnModuleInit, OnModuleDestroy {
       callbacks: {
         // E07-T1: el QR de vinculación se expone aquí. En un despliegue real lo tomaría un
         // canal de onboarding (dashboard/CLI); por ahora se loguea para vincular el número.
-        onQr: (qr) =>
+        onQr: (qr) => {
+          // Guarda el QR en la BD para mostrarlo en el dashboard (el admin lo escanea desde ahí).
+          void this.store.setPairingQr(waNumberId, qr).catch((e) => this.logger.error(String(e)));
           qrcodeTerminal.generate(qr, { small: true }, (ascii) =>
             this.logger.warn(
               `📱 Escanea este QR para vincular ${waNumberId} ` +
                 `(WhatsApp → Ajustes → Dispositivos vinculados → Vincular dispositivo):\n${ascii}`,
             ),
-          ),
-        onConnected: () => this.logger.log(`Instancia ${waNumberId} lista`),
+          );
+        },
+        onConnected: () => {
+          void this.store.markConnected(waNumberId).catch((e) => this.logger.error(String(e)));
+          this.logger.log(`Instancia ${waNumberId} lista`);
+        },
         onLoggedOut: () =>
           this.logger.error(`Instancia ${waNumberId} deslogueada/baneada: re-vincular (nuevo QR)`),
       },

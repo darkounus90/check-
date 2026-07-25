@@ -17,6 +17,8 @@ import { TransactionsController } from "./me/transactions.controller";
 import { TransactionsService } from "./me/transactions.service";
 import { VoucherListService } from "./me/voucher-list.service";
 import { VouchersController } from "./me/vouchers.controller";
+import { WhatsappController } from "./me/whatsapp.controller";
+import { WhatsappStatusService } from "./me/whatsapp-status.service";
 import { ObservabilityModule } from "./observability/observability.module";
 import { OnboardingController } from "./onboarding/onboarding.controller";
 import { OnboardingService } from "./onboarding/onboarding.service";
@@ -44,6 +46,7 @@ import { TenantModule } from "./tenant/tenant.module";
     QrController,
     TransactionsController,
     VouchersController,
+    WhatsappController,
     OnboardingController,
     AccountsController,
     MailboxController,
@@ -54,6 +57,7 @@ import { TenantModule } from "./tenant/tenant.module";
     QrService,
     TransactionsService,
     VoucherListService,
+    WhatsappStatusService,
   ],
 })
 export class AppModule {}

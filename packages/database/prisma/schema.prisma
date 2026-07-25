@@ -303,6 +303,10 @@ model WaNumber {
   health          NumberHealth @default(WARMING)
   warmupStartedAt DateTime?
 
+  /// QR de vinculación vigente (Baileys) para mostrarlo en el dashboard y que el admin
+  /// conecte su teléfono. Se llena cuando WhatsApp pide vincular y se limpia al conectar.
+  pairingQr String?
+
   /// Motor de warmeo (E07-T6): conteo de envíos por ventana horaria para respetar el límite
   /// del escalón (día1: 20/h, sem2: 60/h, luego 200/h). `warmupHourWindowStart` es el inicio
   /// de la ventana horaria vigente; `warmupSentInWindow` los envíos hechos en ella. Se

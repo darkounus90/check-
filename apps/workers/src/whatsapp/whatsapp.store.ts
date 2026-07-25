@@ -145,6 +145,21 @@ export class WhatsAppStore
     };
   }
 
+  // ── Vinculación por QR desde el dashboard ───────────────────
+
+  /** Guarda el QR de vinculación vigente para que el dashboard lo muestre. */
+  async setPairingQr(waNumberId: string, qr: string): Promise<void> {
+    await this.prisma.waNumber.update({ where: { id: waNumberId }, data: { pairingQr: qr } });
+  }
+
+  /** Marca el número como conectado y limpia el QR (ya no hay que vincular). */
+  async markConnected(waNumberId: string): Promise<void> {
+    await this.prisma.waNumber.update({
+      where: { id: waNumberId },
+      data: { pairingQr: null, health: "CONNECTED" },
+    });
+  }
+
   /**
    * E07-T3 (poller): comprobantes que llegaron por WhatsApp, ya tienen `Transaction`
    * resuelta (VERIFIED/SUSPICIOUS) y aún NO se respondieron (`notifiedAt = null`). Acota el
