@@ -6,6 +6,7 @@ import {
   WhatsAppInstance,
   WhatsAppPool,
 } from "@check/whatsapp";
+import qrcodeTerminal from "qrcode-terminal";
 import {
   Inject,
   Injectable,
@@ -151,7 +152,13 @@ export class WhatsAppManager implements OnModuleInit, OnModuleDestroy {
       callbacks: {
         // E07-T1: el QR de vinculación se expone aquí. En un despliegue real lo tomaría un
         // canal de onboarding (dashboard/CLI); por ahora se loguea para vincular el número.
-        onQr: (qr) => this.logger.warn(`QR de vinculación para ${waNumberId} (escanéalo):\n${qr}`),
+        onQr: (qr) =>
+          qrcodeTerminal.generate(qr, { small: true }, (ascii) =>
+            this.logger.warn(
+              `📱 Escanea este QR para vincular ${waNumberId} ` +
+                `(WhatsApp → Ajustes → Dispositivos vinculados → Vincular dispositivo):\n${ascii}`,
+            ),
+          ),
         onConnected: () => this.logger.log(`Instancia ${waNumberId} lista`),
         onLoggedOut: () =>
           this.logger.error(`Instancia ${waNumberId} deslogueada/baneada: re-vincular (nuevo QR)`),
