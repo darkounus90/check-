@@ -25,6 +25,13 @@ export interface WaSessionStore {
   loadAuthState(waNumberId: string): Promise<unknown | null>;
   /** Persiste (upsert) el `authState` de un número. */
   saveAuthState(waNumberId: string, authState: unknown): Promise<void>;
+  /**
+   * Borra la sesión persistida del número para forzar una re-vinculación limpia. Se llama
+   * cuando WhatsApp cierra con `loggedOut` (el dueño desvinculó el dispositivo): sin esto,
+   * las credenciales viejas se quedan en la BD y Baileys nunca emite un QR nuevo. La
+   * implementación también debe limpiar el QR viejo y dejar el número listo para re-emparejar.
+   */
+  clearAuthState(waNumberId: string): Promise<void>;
 }
 
 // ─────────────────────────────────────────────────────────────

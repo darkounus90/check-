@@ -31,6 +31,9 @@ function makeMemoryStore(): WaSessionStore & { blob: unknown } {
       // Simula el round-trip por Postgres (JSON): clona a algo JSON-puro.
       state.blob = JSON.parse(JSON.stringify(authState)) as unknown;
     },
+    async clearAuthState() {
+      state.blob = null;
+    },
   };
 }
 

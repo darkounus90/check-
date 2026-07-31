@@ -84,6 +84,19 @@ export class WhatsAppStore
     });
   }
 
+  /**
+   * Borra la sesión persistida y deja el número listo para re-emparejar: elimina la fila
+   * `WaSession` (así `loadAuthState` devuelve null y `useDbAuthState` genera credenciales
+   * nuevas) y resetea el `WaNumber` (limpia el QR viejo y vuelve a `WARMING`). Idempotente.
+   */
+  async clearAuthState(waNumberId: string): Promise<void> {
+    await this.prisma.waSession.deleteMany({ where: { waNumberId } });
+    await this.prisma.waNumber.update({
+      where: { id: waNumberId },
+      data: { pairingQr: null, health: "WARMING" },
+    });
+  }
+
   // ── E07-T2: resolución de negocio + ingesta ─────────────────
 
   /**

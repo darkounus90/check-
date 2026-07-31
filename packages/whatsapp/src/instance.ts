@@ -100,6 +100,9 @@ export class WhatsAppInstance {
   private socket: WASocket | undefined;
   private auth: DbAuthState | undefined;
   private stopped = false;
+  /** Evita un bucle de re-vinculación: solo intentamos una limpieza+reinicio por logout,
+   * hasta que una conexión abierta (`open`) lo restablezca. */
+  private relinking = false;
   /**
    * Estado de salud vigente en memoria del número (E07-T9). Arranca en `warming` (aún no
    * conectado) y transiciona con los eventos `connection.update` de Baileys. Lo lee el
@@ -184,6 +187,7 @@ export class WhatsAppInstance {
       }
       if (connection === "open") {
         this.currentHealth = "connected"; // E07-T9: número sano
+        this.relinking = false; // conexión sana: se puede volver a re-vincular si hiciera falta
         this.deps.logger.info(`Instancia ${this.deps.waNumberId} conectada`);
         this.deps.callbacks?.onConnected?.();
       }
@@ -214,12 +218,19 @@ export class WhatsAppInstance {
     const loggedOut = statusCode === DisconnectReason.loggedOut;
 
     if (this.currentHealth === "banned") {
-      // Sesión inválida/baneada: el número ya no sirve. Hará falta re-escanear QR / reemplazar
-      // el número; no reconectamos automáticamente (sería un bucle). El pool (E07-T7) dejará
-      // de enrutar a este número y la Épica 8 elegirá otro sano.
       const reason = loggedOut ? "deslogueada" : `no utilizable (statusCode ${statusCode})`;
       this.deps.logger.warn(`Instancia ${this.deps.waNumberId} ${reason} (se requiere nuevo QR)`);
       this.deps.callbacks?.onLoggedOut?.();
+      // `loggedOut` = el dueño desvinculó el dispositivo. La sesión persistida ya no sirve; si
+      // la dejamos, `useDbAuthState` la recarga y Baileys nunca emite QR nuevo (se queda
+      // "Generando…" en el dashboard). La borramos y reiniciamos UNA vez para forzar un
+      // emparejamiento limpio → Baileys emitirá un QR nuevo (callback onQr → pairingQr).
+      // Otros motivos "banned" (forbidden/badSession…) sí son terminales: no reintentamos
+      // solos para no caer en un bucle de baneo (el pool E07-T7 enruta a otro número sano).
+      if (loggedOut && !this.stopped && !this.relinking) {
+        this.relinking = true;
+        void this.relink();
+      }
       return;
     }
 
@@ -231,6 +242,28 @@ export class WhatsAppInstance {
     void this.connect().catch((e: unknown) => {
       this.deps.logger.error(`Reconexión falló: ${errMsg(e)}`);
     });
+  }
+
+  /**
+   * Tras un `loggedOut`: borra la sesión persistida (credenciales viejas ya inservibles) y
+   * arranca de cero, de modo que `useDbAuthState` inicialice credenciales nuevas y Baileys
+   * emita un QR de vinculación nuevo (llega por `connection.update.qr` → callback onQr →
+   * se guarda en `pairingQr` para que el dashboard lo muestre). Aislado: si falla, deja el
+   * error en el log sin tumbar el proceso.
+   */
+  private async relink(): Promise<void> {
+    try {
+      this.socket?.end(undefined);
+      this.socket = undefined;
+      await this.deps.sessionStore.clearAuthState(this.deps.waNumberId);
+      this.currentHealth = "warming";
+      this.deps.logger.warn(
+        `Instancia ${this.deps.waNumberId}: sesión limpiada, generando QR nuevo para re-vincular`,
+      );
+      await this.start();
+    } catch (error) {
+      this.deps.logger.error(`Re-vinculación falló: ${errMsg(error)}`);
+    }
   }
 
   /** E07-T2 + E07-T3: ingesta del comprobante al pipeline + acuse 🟡. */

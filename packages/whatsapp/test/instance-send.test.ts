@@ -89,7 +89,11 @@ function baseDeps(overrides: Partial<WhatsAppInstanceDeps>): WhatsAppInstanceDep
   };
   return {
     waNumberId: "wa-1",
-    sessionStore: { loadAuthState: unused as never, saveAuthState: unused as never },
+    sessionStore: {
+      loadAuthState: unused as never,
+      saveAuthState: unused as never,
+      clearAuthState: unused as never,
+    },
     businessResolver: { resolveBusinessId: unused as never },
     storage: { uploadVoucher: unused as never },
     ingestStore: { createVoucher: unused as never, saveVoucherContext: unused as never },

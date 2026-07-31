@@ -20,8 +20,8 @@ export const NAV_ITEMS: readonly NavItem[] = [
   { href: "/dashboard/historico", label: "Histórico", roles: ["OWNER"] },
   { href: "/dashboard/alertas", label: "Alertas", roles: ["OWNER"] },
   { href: "/dashboard/cuentas", label: "Cuentas", roles: ["OWNER"] },
-  { href: "/dashboard/qr", label: "Código QR", roles: ["OWNER"] },
-  { href: "/dashboard/whatsapp", label: "WhatsApp", roles: ["OWNER"] },
+  { href: "/dashboard/qr", label: "QR de cobro", roles: ["OWNER"] },
+  { href: "/dashboard/whatsapp", label: "Conectar WhatsApp", roles: ["OWNER"] },
 ];
 
 /** Ítems visibles para el rol dado. */
