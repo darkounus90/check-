@@ -124,6 +124,30 @@ export async function refreshMailboxAction(): Promise<
   }
 }
 
+/**
+ * Modo "solo comprobante": el dueño declara si su banco NO envía correos de abono (ej.
+ * Bre-B, solo push/SMS). Al activarlo el onboarding deja de esperar el correo. Solo dueño.
+ */
+export async function setNoBankEmailAction(
+  value: boolean,
+): Promise<ActionResult<MailboxStatusResponse>> {
+  const session = await getDashboardSession();
+  if (!session || session.role !== "OWNER") {
+    return { ok: false, error: "No tienes permiso para hacer esto." };
+  }
+  try {
+    const data = await apiFetch<MailboxStatusResponse>("/onboarding/mailbox/no-email", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ value }),
+    });
+    revalidatePath("/dashboard/cuentas");
+    return { ok: true, error: null, data };
+  } catch (error) {
+    return { ok: false, error: toActionError(error) };
+  }
+}
+
 /** Refetch de cuentas + buzón (para refrescar la vista tras una mutación). E10-T8. */
 export async function refetchAccountsAction(): Promise<
   ActionResult<{ accounts: ReceivingAccount[]; mailbox: MailboxStatusResponse | null }>

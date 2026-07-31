@@ -37,11 +37,14 @@ enum MailboxStatus {
   VERIFIED
 }
 
-/// Bancos que un negocio puede tener como cuenta receptora (parsers de correo).
+/// Entidades donde un negocio puede recibir pagos (cuenta receptora). Incluye billeteras
+/// (Nequi/Daviplata) cuya "cuenta" es una llave Bre-B = número de celular.
 enum ReceiverBank {
   BANCOLOMBIA
   DAVIVIENDA
   BBVA
+  NEQUI
+  DAVIPLATA
 }
 
 /// Bancos desde los que un pagador puede emitir (parsers de comprobante OCR).
@@ -98,6 +101,20 @@ model Business {
   /// Identificador del buzón entrante (hash de Postmark o local-part). Config del dominio aparte (D1-D2).
   inboundMailboxId String        @unique
   mailboxStatus    MailboxStatus @default(PENDING)
+
+  /// El dueño declaró que su banco/billetera NO envía correos de abono (solo push/SMS, ej.
+  /// algunos flujos Bre-B). Activa el "modo solo comprobante" (nivel intermedio explícito):
+  /// el buzón nunca podrá verificarse por correo, así que los pagos se marcan 🟡 provisional
+  /// (verificado por OCR + defensas, sin cruce con correo real del banco). Ver mailbox.service.
+  noBankEmail Boolean @default(false)
+
+  /// Auto-confirmación del reenvío de Gmail: cuando el dueño agrega nuestro buzón como
+  /// dirección de reenvío, Google manda un correo "Gmail Forwarding Confirmation" a ESE
+  /// buzón (el nuestro). La ingesta lo detecta, guarda aquí código+enlace y lo confirma solo.
+  /// Se conservan para mostrarlos como respaldo manual si el auto-confirm fallara.
+  fwdConfirmCode String?
+  fwdConfirmLink String?
+  fwdConfirmedAt DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

@@ -1,4 +1,4 @@
-import { Controller, Get, Post, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Post, UseGuards } from "@nestjs/common";
 
 import { CurrentTenant } from "../auth/current-tenant.decorator";
 import { Roles } from "../auth/roles.decorator";
@@ -23,5 +23,15 @@ export class MailboxController {
   @Roles("OWNER")
   refresh(@CurrentTenant() tenant: TenantContext) {
     return this.mailbox.refresh(tenant.businessId);
+  }
+
+  /**
+   * Modo "solo comprobante": el dueño declara si su banco/billetera NO envía correos de
+   * abono (ej. algunos flujos Bre-B, solo push/SMS). Solo dueño.
+   */
+  @Post("no-email")
+  @Roles("OWNER")
+  setNoBankEmail(@CurrentTenant() tenant: TenantContext, @Body() body: { value?: boolean }) {
+    return this.mailbox.setNoBankEmail(tenant.businessId, body?.value === true);
   }
 }

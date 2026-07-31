@@ -15,6 +15,11 @@ const envSchema = z.object({
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
   /// Dominio del buzón entrante (configurable — D1/D2). Placeholder hasta tener dominio propio.
   INBOUND_EMAIL_DOMAIN: z.string().default("inbound.check.local"),
+  /// Dirección base REAL del buzón compartido de CloudMailin (ej. `hash@cloudmailin.net`).
+  /// Cuando está presente, la dirección que ve el comerciante se arma con plus-addressing
+  /// (`hash+inboundMailboxId@cloudmailin.net`) — la que de verdad recibe y enruta correo.
+  /// Si se deja vacío, se cae al placeholder `inboundMailboxId@INBOUND_EMAIL_DOMAIN` (dev).
+  INBOUND_EMAIL_ADDRESS: z.string().default(""),
   /// Secreto compartido para autenticar el webhook de Postmark Inbound (E04-T1).
   POSTMARK_INBOUND_SECRET: z.string().default("dev-inbound-secret"),
   /// Redis para encolar OCR de comprobantes públicos (BullMQ, E09-T4).

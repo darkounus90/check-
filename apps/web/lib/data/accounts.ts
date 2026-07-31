@@ -2,8 +2,9 @@ import "server-only";
 
 import { apiFetch } from "@/lib/data/api-client";
 
-/** Bancos receptores soportados (enum `ReceiverBank` del schema). */
-export type ReceiverBank = "BANCOLOMBIA" | "DAVIVIENDA" | "BBVA";
+/** Entidades receptoras soportadas (enum `ReceiverBank` del schema). Incluye billeteras
+ * cuya "cuenta" es una llave Bre-B (número de celular). */
+export type ReceiverBank = "BANCOLOMBIA" | "DAVIVIENDA" | "BBVA" | "NEQUI" | "DAVIPLATA";
 
 /** Cuenta receptora del negocio (respuesta de `GET /accounts`). */
 export interface ReceivingAccount {

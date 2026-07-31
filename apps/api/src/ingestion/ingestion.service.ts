@@ -35,6 +35,37 @@ const BANK_MAP: Record<string, ReceiverBank> = {
   bbva: ReceiverBank.BBVA,
 };
 
+/** Remitente de los correos de confirmación de reenvío de Gmail (fijo de Google). */
+const GMAIL_FORWARD_SENDER = "forwarding-noreply@google.com";
+
+export interface GmailForwardConfirmation {
+  /** Código de 9 dígitos que Gmail pide pegar en su configuración. */
+  code: string;
+  /** Enlace de confirmación de un-clic (host google.com); al abrirlo se activa el reenvío. */
+  link?: string;
+}
+
+/**
+ * Detecta el correo "Gmail Forwarding Confirmation" que Google envía al buzón destino
+ * cuando el dueño agrega nuestra dirección como reenvío, y extrae el código + enlace.
+ * Devuelve `null` si no es ese correo. Tolerante a español/inglés y a solo-HTML (el
+ * cuerpo ya viene aplanado por `bodyText`).
+ */
+export function parseGmailForwardConfirmation(
+  from: string | undefined,
+  raw: string,
+): GmailForwardConfirmation | null {
+  if (!from || !from.toLowerCase().includes(GMAIL_FORWARD_SENDER)) return null;
+  // El código aparece como "(#123456789)" en el asunto y "código de confirmación es 123456789".
+  const code = raw.match(/\b(\d{9})\b/)?.[1];
+  if (!code) return null;
+  // Enlace de confirmación de un clic: URL a un host de Google (mail-settings/mail.google.com).
+  const link = raw
+    .match(/https?:\/\/[^\s"'<>]+/gi)
+    ?.find((url) => /(^https?:\/\/)([\w.-]*\.)?google\.com\//i.test(url));
+  return link ? { code, link } : { code };
+}
+
 /**
  * Ingesta de correos bancarios (E04-T2/T3/T9/T10).
  * En producción el parseo iría a una cola BullMQ; sin Redis se procesa inline.
@@ -66,6 +97,15 @@ export class IngestionService {
     }
 
     const raw = [payload.From, payload.Subject, payload.TextBody].filter(Boolean).join("\n");
+
+    // Onboarding "conexión fácil": si es el correo de confirmación de reenvío de Gmail,
+    // NO es un correo bancario. Guardamos el código y lo auto-confirmamos abriendo el
+    // enlace de Google, para que el dueño no tenga que pegar nada manualmente.
+    const confirmation = parseGmailForwardConfirmation(payload.From, raw);
+    if (confirmation) {
+      return this.handleForwardConfirmation(business.id, confirmation);
+    }
+
     const parsed = parseBankEmail(raw);
 
     // E11-T4/T7: métrica de tasa de parseo por banco y detección de "parser dejó de matchear".
@@ -112,6 +152,39 @@ export class IngestionService {
     // E04-T9: no reconocido → alerta.
     this.logger.warn(`Correo no parseado (negocio ${business.id}): ${parsed.error}`);
     return { status: "unparsed", bankEmailId: bankEmail.id };
+  }
+
+  /**
+   * Guarda el código de confirmación de reenvío de Gmail en el negocio y, si trae enlace de
+   * un clic a un host de Google, lo abre para activar el reenvío automáticamente. Aislado:
+   * un fallo del fetch no rompe la ingesta (el código queda guardado como respaldo manual).
+   */
+  private async handleForwardConfirmation(
+    businessId: string,
+    confirmation: GmailForwardConfirmation,
+  ): Promise<{ status: string }> {
+    let confirmedAt: Date | null = null;
+    if (confirmation.link) {
+      try {
+        const res = await fetch(confirmation.link, { method: "GET", redirect: "follow" });
+        if (res.ok) confirmedAt = new Date();
+        else this.logger.warn(`Auto-confirmación de reenvío devolvió ${res.status}`);
+      } catch (error) {
+        this.logger.warn(`No se pudo auto-confirmar el reenvío de Gmail: ${String(error)}`);
+      }
+    }
+    await this.prisma.business.update({
+      where: { id: businessId },
+      data: {
+        fwdConfirmCode: confirmation.code,
+        fwdConfirmLink: confirmation.link ?? null,
+        ...(confirmedAt ? { fwdConfirmedAt: confirmedAt } : {}),
+      },
+    });
+    this.logger.log(
+      `Confirmación de reenvío de Gmail para negocio ${businessId} (auto=${confirmedAt ? "sí" : "no"})`,
+    );
+    return { status: confirmedAt ? "forwarding_confirmed" : "forwarding_pending_code" };
   }
 
   /** Verifica el secreto del webhook (E04-T1). */
