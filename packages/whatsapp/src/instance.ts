@@ -1,11 +1,14 @@
 import { randomUUID } from "node:crypto";
 
 import makeWASocket, {
+  Browsers,
   DisconnectReason,
   downloadMediaMessage,
+  fetchLatestBaileysVersion,
   makeCacheableSignalKeyStore,
   type WAMessage,
   type WASocket,
+  type WAVersion,
 } from "@whiskeysockets/baileys";
 
 /** Forma de `ILogger` (pino-like) que espera `downloadMediaMessage`; Baileys no la
@@ -103,6 +106,9 @@ export class WhatsAppInstance {
   /** Evita un bucle de re-vinculación: solo intentamos una limpieza+reinicio por logout,
    * hasta que una conexión abierta (`open`) lo restablezca. */
   private relinking = false;
+  /** Versión del protocolo WhatsApp Web (cacheada tras el primer fetch). Sin ella, un
+   * WhatsApp actualizado rechaza la conexión en bucle y nunca se emite el QR. */
+  private waVersion: WAVersion | undefined;
   /**
    * Estado de salud vigente en memoria del número (E07-T9). Arranca en `warming` (aún no
    * conectado) y transiciona con los eventos `connection.update` de Baileys. Lo lee el
@@ -163,7 +169,23 @@ export class WhatsAppInstance {
   private async connect(): Promise<void> {
     if (!this.auth) throw new Error("WhatsAppInstance.connect llamado antes de start()");
 
+    // Fija la versión vigente de WhatsApp Web (una vez por instancia). Si no se pasa, un
+    // WhatsApp actualizado puede cerrar la conexión en bucle (DEGRADED) sin emitir QR. Si el
+    // fetch falla, seguimos con la versión por defecto de Baileys (mejor que no conectar).
+    if (!this.waVersion) {
+      try {
+        const { version } = await fetchLatestBaileysVersion();
+        this.waVersion = version;
+        this.deps.logger.info(`WhatsApp Web version ${version.join(".")}`);
+      } catch (error) {
+        this.deps.logger.warn(`No se pudo obtener la versión de WhatsApp Web: ${errMsg(error)}`);
+      }
+    }
+
     const socket = makeWASocket({
+      ...(this.waVersion ? { version: this.waVersion } : {}),
+      // Identifica el "navegador" del dispositivo vinculado (aparece en Dispositivos vinculados).
+      browser: Browsers.macOS("Desktop"),
       auth: {
         creds: this.auth.state.creds,
         // Cachea las lecturas de keys (recomendado por Baileys para rendimiento); la
