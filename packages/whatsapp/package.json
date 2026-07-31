@@ -23,7 +23,7 @@
   "dependencies": {
     "@check/database": "workspace:*",
     "@check/shared": "workspace:*",
-    "@whiskeysockets/baileys": "7.0.0-rc13"
+    "@whiskeysockets/baileys": "6.7.24"
   },
   "devDependencies": {
     "tsx": "^4.19.2"

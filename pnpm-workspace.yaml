@@ -2,6 +2,12 @@ packages:
   - "apps/*"
   - "packages/*"
 
+# @whiskeysockets/baileys 6.7.24 (estable "legacy") depende de `libsignal` resuelto por git
+# (github:WhiskeySockets/libsignal-node). pnpm bloquea subdeps exóticas por defecto; la línea
+# 7.0.0-rc la eliminó pero está ROTA contra el WhatsApp actual (Connection Terminated 428,
+# nunca emite QR — verificado empíricamente). 6.7.24 sí conecta, así que permitimos la subdep.
+blockExoticSubdeps: false
+
 # Dependencias nativas con scripts de build aprobados explícitamente (política supply-chain de pnpm).
 # - sharp: análisis/optimización de imágenes (Next.js + motor de verificación, Épica 6)
 # - prisma / @prisma/*: descarga de query engines (ORM, Épica 2)
